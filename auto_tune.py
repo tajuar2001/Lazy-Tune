@@ -132,8 +132,19 @@ def autotune_cepstrum_new(mic_signal):
     envelope1 = np.exp(2 * np.real(np.fft.fft(cep_cut1)))  # Spectral shape
     envelope2 = np.exp(2 * np.real(np.fft.fft(cep_cut2)))  # Spectral shape
 
+    if len(envelope1) > len(envelope2):
+        envelope1 = envelope1[:len(envelope2)]
+    elif len(envelope2) > len(envelope1):
+        envelope2 = envelope2[:len(envelope1)]
+
     # Find the correction factor from envelopes
     warp_factor = envelope1 / envelope2
+
+    if len(warp_factor) > len(FFT2):
+        warp_factor = warp_factor[:len(FFT2)]
+    elif len(FFT2) > len(warp_factor):
+        FFT2 = FFT2[:len(warp_factor)]
+
 
     # Apply the correction
     new = FFT2 * warp_factor
