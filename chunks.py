@@ -1,6 +1,7 @@
 import subprocess
-import wave
 import sys
+
+import auto_tune
 
 # Define the command for recording with the desired parameters
 sox_command = [
@@ -16,8 +17,24 @@ sox_command = [
 def process_audio_chunk(chunk):
     # Implement your audio processing here
     # For example, you could adjust volume, apply filters, etc.
-    # This is just a placeholder function
-    processed_chunk = chunk  # This should be replaced with actual processing
+
+        ### ------------------------------------------------------------------------------------ ###
+
+    processed_chunk = auto_tune.autotune(chunk, formant_flag=0, method=2) # formant_flag=1 (no correction), 0=following methods=0 cepstrum, 1=cepstrum_new, 2=psola
+    # Normalize the processed chunk
+    # normalized_chunk = peak_normalize(processed_chunk, target_amplitude=0.9)
+    normalized_chunk = processed_chunk
+    # Ensure that normalized_chunk matches the window size
+    if len(normalized_chunk) > auto_tune.window_size:
+        # If normalized_chunk is larger, trim it to match the window size
+        normalized_chunk = normalized_chunk[:auto_tune.window_size]
+    elif len(normalized_chunk) < auto_tune.window_size:
+        # If normalized_chunk is smaller, pad it with zeros
+        pad_length = auto_tune.window_size - len(normalized_chunk)
+        normalized_chunk = auto_tune.np.pad(normalized_chunk, (0, pad_length), 'constant')
+
+        ### ------------------------------------------------------------------------------------ ###
+
     return processed_chunk
 
 # Set up a pipeline to read chunks of audio data from SoX

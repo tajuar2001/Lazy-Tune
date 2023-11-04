@@ -1,7 +1,4 @@
 import numpy as np
-import aubio # https://github.com/aubio/aubio
-import pyaudio
-import scipy
 
 import scipy.io.wavfile as wavfile
 
@@ -18,16 +15,19 @@ import scipy.io.wavfile as wavfile
 semitone_distance = 2**(1/12)
 sample_rate = 44100 # Khz
 
+### Original
+
 def autotune(mic_signal, formant_flag=0, method=0): # input signal 44.1Khz, bool formant-preservation, method
     if formant_flag == 1:
         return autotune_original(mic_signal)
     if method == 0:
-        #return autotune_cepstrum(mic_signal)
-        return autotune_cepstrum_new(mic_signal)
+        return autotune_cepstrum(mic_signal)
     if method == 1:
-        return autotune_psola(mic_signal)
+        return autotune_cepstrum_new(mic_signal)
     if method == 2:
-        return autotune_lpc(mic_signal)
+        return autotune_psola(mic_signal)
+    # if method == 3:
+    #     return autotune_lpc(mic_signal)
     return
 
 # find the nearest frequency
@@ -60,6 +60,8 @@ def autotune_original(mic_signal):
 
     
     return shifted_chunk
+
+### Cepstrum
 
 #Cepstrum (https://en.wikipedia.org/wiki/Cepstrum)
 def autotune_cepstrum(mic_signal): 
@@ -115,6 +117,7 @@ def overlap_and_add(input_signal, hop_size, overlap_constant):
 
     return output_signal
 
+# idea: https://dsp.stackexchange.com/questions/37141/preserving-formants-using-cepstrum
 def autotune_cepstrum_new(mic_signal):
     FFT1 = np.fft.fft(mic_signal)
     FFT2 = np.fft.fft(autotune_original(mic_signal))
@@ -145,7 +148,6 @@ def autotune_cepstrum_new(mic_signal):
     elif len(FFT2) > len(warp_factor):
         FFT2 = FFT2[:len(warp_factor)]
 
-
     # Apply the correction
     new = FFT2 * warp_factor
 
@@ -160,16 +162,72 @@ def autotune_cepstrum_new(mic_signal):
     overlap = 0.75  # Adjust to your preference
     return overlap_and_add(New_Formant_signal, hop_size, int(hop_size * overlap))
 
+### PSOLA
+
+def find_pitch_periods(input_audio):
+    # Assuming a fixed pitch period of your choice in samples.
+    fixed_period_samples = 147  # Adjust this value as needed
+
+    # Determine pitch periods based on the fixed period in samples.
+    pitch_periods = []
+
+    # Iterate through the audio signal and find pitch marks at fixed intervals.
+    for i in range(0, len(input_audio), fixed_period_samples):
+        pitch_periods.append(i)
+
+    return pitch_periods
+
+def overlap_and_add_psola(output_audio, segment):
+    # Ensure that the segment is not shorter than the expected overlap length.
+    overlap_length = len(segment) // 2
+    if overlap_length == 0:
+        return output_audio
+
+    # Ensure that the segment is not longer than the existing output_audio.
+    if len(segment) > len(output_audio):
+        output_audio = np.pad(output_audio, (0, len(segment) - len(output_audio)))
+
+    # Define a window function (e.g., Hanning window) to use for overlap-and-add.
+    window = np.hanning(len(segment))
+
+    # Convert both segment and window to float64 to avoid data type mismatch.
+    segment = segment.astype(float)
+    window = window.astype(float)
+
+    # Apply the window function to the segment.
+    segment *= window
+
+    # Overlap-and-add the modified segment to the output.
+    output_audio[:overlap_length] += segment[:overlap_length]
+    output_audio[overlap_length:overlap_length + len(segment[overlap_length:])] = segment[overlap_length:]
+
+    return output_audio
 
 # PSOLA https://en.wikipedia.org/wiki/PSOLA
 def autotune_psola(mic_signal):
-    # find the main frequency of the chunk
+    # Analyze pitch and find pitch marks
+    pitch_periods = find_pitch_periods(mic_signal)
 
-    # find the nearest semitone
+    # Initialize an empty output signal
+    output_audio = np.zeros(len(mic_signal))
 
-    # pitch shift using psola
+    # PSOLA: Overlap and add
+    for period in pitch_periods:
+        pitch_period = 2 * (period - pitch_periods[0])
 
-    return
+        # Extract segments centered at pitch marks
+        segment = mic_signal[period - pitch_period // 2 : period + pitch_period // 2]
+
+        # Modify the segment (expand/contract as needed)
+
+        # Overlap and add the modified segment to the output
+        output_audio = overlap_and_add_psola(output_audio, segment)
+
+    # Scale the new signal to match the length of the original (use resampling or time-stretching)
+
+    # You can add your resampling or time-stretching code here
+    # For example, using librosa's time-stretching functions
+    return output_audio
 
 # Linear Predictive Coding (https://en.wikipedia.org/wiki/Linear_predictive_coding)
 def autotune_lpc(mic_signal): 
@@ -204,7 +262,7 @@ processed_audio = np.zeros(len(audio_data), dtype=np.float64)
 for i in range(num_chunks):
         chunk = audio_data[i*window_size:(i+1)*window_size]
         # Process the chunk using your autotune function
-        processed_chunk = autotune(chunk, formant_flag=0, method=0)
+        processed_chunk = autotune(chunk, formant_flag=0, method=2)
         # Normalize the processed chunk
         # normalized_chunk = peak_normalize(processed_chunk, target_amplitude=0.9)
         normalized_chunk = processed_chunk
