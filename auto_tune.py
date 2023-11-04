@@ -250,8 +250,8 @@ def peak_normalize(audio_data, target_amplitude=0.9):
     normalized_audio_data = audio_data * scaling_factor
     return normalized_audio_data
 
-input_file = 'test_chunk.wav'
-output_file = 'autotuned_chunk.wav'
+input_file = 'input.wav'
+output_file = 'autotuned_input.wav'
 window_size = 1024
 
 sample_rate, audio_data = wavfile.read(input_file)
@@ -262,7 +262,7 @@ processed_audio = np.zeros(len(audio_data), dtype=np.float64)
 for i in range(num_chunks):
         chunk = audio_data[i*window_size:(i+1)*window_size]
         # Process the chunk using your autotune function
-        processed_chunk = autotune(chunk, formant_flag=0, method=2)
+        processed_chunk = autotune(chunk, formant_flag=0, method=1)
         # Normalize the processed chunk
         # normalized_chunk = peak_normalize(processed_chunk, target_amplitude=0.9)
         normalized_chunk = processed_chunk
