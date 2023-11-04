@@ -1,6 +1,8 @@
 import subprocess
 import pyaudio
 
+import numpy as np
+
 # local modules
 import auto_tune
 
@@ -12,10 +14,11 @@ sox_command = ["rec", "--buffer", str(buffer_size), "-r", "48000", "-t", "raw", 
 def process_audio_chunk(chunk):
     # Implement your audio processing here
     # For example, you could adjust volume, apply filters, etc.
+    numeric_array = np.frombuffer(chunk, dtype=np.int16)
 
         ### ------------------------------------------------------------------------------------ ###
 
-    processed_chunk = auto_tune.autotune(chunk, formant_flag=0, method=1) # formant_flag=1 (no correction), 0=following methods=0 cepstrum, 1=cepstrum_new, 2=psola
+    processed_chunk = auto_tune.autotune(numeric_array, formant_flag=0, method=1) # formant_flag=1 (no correction), 0=following methods=0 cepstrum, 1=cepstrum_new, 2=psola
     # Normalize the processed chunk
     # normalized_chunk = peak_normalize(processed_chunk, target_amplitude=0.9)
     normalized_chunk = processed_chunk
