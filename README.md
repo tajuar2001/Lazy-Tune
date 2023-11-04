@@ -55,5 +55,14 @@ Lazytune is not just about creating music; it's about pushing the boundaries of 
 - Room equalization for optimal audio output in different environments
 - A broad spectrum of audio effects to enhance user creativity
 
-## Contributions
-We welcome contributions and collaborations. If you're passionate about music, audio processing, or just love tinkering with sound, join us in making Lazytune a symphony of technology and creativity!
+## Team Contributions
+
+### Tajuar Bhuiyan [GitHub](https://github.com/tajuar2001)
+- **Hardware Implementation, Algorithm Development, Real-Time- Audio Processing** 
+  
+### Christopher Brown [GitHub](https://github.com/chrsbrwn)
+- **Audio I/O, Signal Processing & Embedded Systems, Quality Assurance**
+
+### Seiya Kozakai [GitHub](https://github.com/skozakai)
+- **Signal Processing, Algorithm Development (C/C++), Quality Assurance**
+
