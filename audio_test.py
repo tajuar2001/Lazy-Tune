@@ -15,6 +15,7 @@ def process_audio_chunk(chunk):
     # Implement your audio processing here
     # For example, you could adjust volume, apply filters, etc.
     numeric_array = np.frombuffer(chunk, dtype=np.int16)
+    print(numeric_array)
 
         ### ------------------------------------------------------------------------------------ ###
 

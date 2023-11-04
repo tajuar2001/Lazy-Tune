@@ -13,7 +13,7 @@ import scipy.io.wavfile as wavfile
 # Note Transition
 
 semitone_distance = 2**(1/12)
-sample_rate = 44100 # Khz
+sample_rate = 48000 # Khz
 
 ### Original
 
