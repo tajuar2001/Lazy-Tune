@@ -2,6 +2,7 @@ import subprocess
 import pyaudio
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 # local modules
 import auto_tune
@@ -46,6 +47,21 @@ stream = p.open(format=p.get_format_from_width(2),  # 16 bits = 2 bytes
                 rate=48000,
                 output=True)
 
+# Create a figure and axis for the live waveform plot
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.set_title("Live Audio Waveform")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Amplitude")
+
+# Initialize an empty line for the plot
+line, = ax.plot([], [])
+
+# Set the x-axis limits based on your desired time range
+ax.set_xlim(0, 1)  # Adjust the range as needed
+
+# Set the y-axis limits based on your audio amplitude range
+ax.set_ylim(-32768, 32767)  # Adjust based on your audio format
+
 try:
     while True:
         # Read a chunk of audio data
@@ -54,15 +70,17 @@ try:
         # If chunk is empty, break from the loop
         if not chunk:
             break
-        
-        # Play the chunk
-        stream.write(chunk)
 
         # Print the type of the chunk
         print(f"Chunk type: {type(chunk)}")
         
         # Print the first 16 bytes of the chunk to get a sense of the data
         print(f"Chunk value (first 16 bytes): {chunk[:16]}")
+
+        numeric_array = np.frombuffer(chunk, dtype=np.int16)
+        time_axis = np.arange(0, len(numeric_array)) / 48000  # Adjust the sample rate if it's different
+        line.set_data(time_axis, numeric_array)
+        fig.canvas.flush_events()
 
         # Here you would process the chunk as needed (if you're doing more than just playing it)
         stream.write(process_audio_chunk(chunk))

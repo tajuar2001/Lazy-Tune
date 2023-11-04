@@ -158,7 +158,7 @@ def autotune_cepstrum_new(mic_signal):
     # You can use scipy's signal.overlap_add or implement your own
 
     # Perform overlap and add
-    hop_size = 147  # Adjust to your preference
+    hop_size = 128  # Adjust to your preference
     overlap = 0.75  # Adjust to your preference
     return overlap_and_add(New_Formant_signal, hop_size, int(hop_size * overlap))
 
@@ -166,7 +166,7 @@ def autotune_cepstrum_new(mic_signal):
 
 def find_pitch_periods(input_audio):
     # Assuming a fixed pitch period of your choice in samples.
-    fixed_period_samples = 147  # Adjust this value as needed
+    fixed_period_samples = 128  # Adjust this value as needed
 
     # Determine pitch periods based on the fixed period in samples.
     pitch_periods = []
@@ -252,7 +252,7 @@ def peak_normalize(audio_data, target_amplitude=0.9):
 
 input_file = 'test_chunk.wav'
 output_file = 'autotuned_chunk.wav'
-window_size = 882
+window_size = 1024
 
 sample_rate, audio_data = wavfile.read(input_file)
 
