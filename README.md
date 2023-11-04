@@ -1,4 +1,4 @@
-# EECS 452 Project: Lazytune
+# EECS 452 Project: LazyTune
 
 ## Project Overview
 Lazytune is an ambitious project that merges creativity with technology, transforming an AKAI MPK Mini II MIDI keyboard into a versatile digital/electronic synth instrument. Utilizing a Raspberry Pi and Teensy audio shield, the project stands out in signal processing and audio I/O capabilities.
