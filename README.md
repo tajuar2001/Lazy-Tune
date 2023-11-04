@@ -34,7 +34,7 @@ In the landscape of Lazytune's audio processing, SoX (Sound eXchange) stands as 
 - **Audio Conversion and Manipulation**: SoX is adept at converting audio files to different formats, adjusting quality, and performing sound manipulations, making it an indispensable part of Lazytune's audio processing pipeline.
 - **Effects Chain**: Through SoX, we apply a chain of effects to audio signals. This includes pitch correction, equalization, and more complex transformations pivotal for the autotune and vocoder features of Lazytune.
 
-### Python and SoX: A Harmonious Duo
+### Python and SoX
 - **Subprocess Control**: Our Python scripts wield the `subprocess` module to interact with SoX, enabling us to build a real-time audio processing environment that's both flexible and powerful.
 - **Stream Handling**: Audio streams are meticulously managed by Python, which communicates with SoX to process and manipulate audio chunks on-the-fly, ensuring a seamless user experience.
 
