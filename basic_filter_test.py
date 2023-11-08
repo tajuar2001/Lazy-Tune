@@ -35,7 +35,7 @@ def process_audio_chunk(chunk):
     processed_chunk = low_pass_filter(numeric_array, 200, 48000)
 
         ### ------------------------------------------------------------------------------------ ###
-    return processed_chunk
+    return processed_chunk.astype(np.int16).tobytes()
 
 # Start the SoX process
 process = subprocess.Popen(sox_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
