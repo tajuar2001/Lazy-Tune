@@ -11,9 +11,12 @@ sox_command = ["rec", "--buffer", str(buffer_size), "-r", "48000", "-t", "raw", 
 # Define basic LPF
 def lpf(signal, cutoff_frequency):
     fft_result = np.fft.fft(signal)
-    frequencies = np.fft.fftfreq(len(fft_result), 1 / 48000)
-    fft_result[np.abs(frequencies) > cutoff_frequency] = 0
-    return np.fft.ifft(fft_result)
+    cutoff_idx = int(cutoff_frequency * len(fft_result) / 48000)
+
+    fft_result[:cutoff_idx] = 0
+    fft_result[-cutoff_idx:] = 0
+    
+    return np.fft.ifft(fft_result).real
     
 
 # Define a function to process the audio chunk
