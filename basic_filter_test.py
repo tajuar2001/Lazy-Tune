@@ -28,9 +28,9 @@ def process_audio_chunk(chunk):
 
         ### ------------------------------------------------------------------------------------ ###
 
-    processed_chunk = lpf(numeric_array, 500) # formant_flag=1 (no correction), 0=following methods=0 cepstrum, 1=cepstrum_new, 2=psola
+    processed_chunk = lpf(numeric_array, 200) # formant_flag=1 (no correction), 0=following methods=0 cepstrum, 1=cepstrum_new, 2=psola
 
-    filtered_signal = np.ascontiguousarray(processed_chunk, dtype=np.float32)
+    filtered_signal = np.ascontiguousarray(processed_chunk, dtype=np.int16)
 
         ### ------------------------------------------------------------------------------------ ###
     return filtered_signal
