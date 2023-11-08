@@ -31,7 +31,7 @@ def process_audio_chunk(chunk):
     processed_chunk = lpf(numeric_array, 200) # formant_flag=1 (no correction), 0=following methods=0 cepstrum, 1=cepstrum_new, 2=psola
 
         ### ------------------------------------------------------------------------------------ ###
-    return processed_chunk
+    return processed_chunk[::-1].tobytes()
 
 # Start the SoX process
 process = subprocess.Popen(sox_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
