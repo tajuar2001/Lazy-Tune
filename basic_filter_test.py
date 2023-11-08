@@ -16,7 +16,7 @@ def lpf(signal, cutoff_frequency):
     fft_result[:cutoff_idx] = 0
     fft_result[-cutoff_idx:] = 0
 
-    return np.fft.ifft(fft_result)
+    return np.real(np.fft.ifft(fft_result))
     
 
 # Define a function to process the audio chunk
@@ -30,10 +30,8 @@ def process_audio_chunk(chunk):
 
     processed_chunk = lpf(numeric_array, 200) # formant_flag=1 (no correction), 0=following methods=0 cepstrum, 1=cepstrum_new, 2=psola
 
-    filtered_signal = np.ascontiguousarray(processed_chunk, dtype=np.int16)
-
         ### ------------------------------------------------------------------------------------ ###
-    return filtered_signal
+    return processed_chunk
 
 # Start the SoX process
 process = subprocess.Popen(sox_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
