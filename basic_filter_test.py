@@ -27,15 +27,13 @@ def low_pass_filter(data, cutoff_frequency, sampling_frequency):
 def process_audio_chunk(chunk):
     # Implement your audio processing here
     # For example, you could adjust volume, apply filters, etc.
-    numeric_array = np.frombuffer(chunk, dtype=np.int16)
-    print(numeric_array)
 
         ### ------------------------------------------------------------------------------------ ###
 
-    processed_chunk = low_pass_filter(numeric_array, 200, 48000)
+    processed_chunk = low_pass_filter(chunk, 200, 48000)
 
         ### ------------------------------------------------------------------------------------ ###
-    return processed_chunk.astype(np.int16).tobytes()
+    return processed_chunk
 
 # Start the SoX process
 process = subprocess.Popen(sox_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
