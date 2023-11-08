@@ -17,7 +17,7 @@ def lpf(signal, cutoff_frequency):
     fft_result[:cutoff_idx] = 0
     fft_result[-cutoff_idx:] = 0
 
-    return np.fft.ifft(fft_result)
+    return np.fft.ifft(fft_result).real
     
 
 # Define a function to process the audio chunk
