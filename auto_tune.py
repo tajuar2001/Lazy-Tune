@@ -17,7 +17,7 @@ sample_rate = 48000 # Khz
 
 ### Original
 
-def autotune(mic_signal, formant_flag=0, method=0): # input signal 44.1Khz, bool formant-preservation, method
+def autotune(mic_signal, formant_flag=0, method=0): # input signal 48Khz, bool formant-preservation, method
     if formant_flag == 1:
         return autotune_original(mic_signal)
     if method == 0:
