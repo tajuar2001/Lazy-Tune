@@ -28,10 +28,13 @@ def process_audio_chunk(chunk):
     # Implement your audio processing here
     # For example, you could adjust volume, apply filters, etc.
 
+    chunk = np.frombuffer(chunk, dtype=np.int16)
+
         ### ------------------------------------------------------------------------------------ ###
 
     processed_chunk = low_pass_filter(chunk, 200, 48000)
 
+    processed_chunk = processed_chunk.astype(np.int16).tobytes()
         ### ------------------------------------------------------------------------------------ ###
     return processed_chunk
 
