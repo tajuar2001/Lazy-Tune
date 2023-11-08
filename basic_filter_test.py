@@ -33,6 +33,7 @@ def process_audio_chunk(chunk):
         ### ------------------------------------------------------------------------------------ ###
 
     #processed_chunk = low_pass_filter(chunk, 200, 48000)
+    processed_chunk = chunk
 
     processed_chunk = processed_chunk.astype(np.int16).tobytes()
         ### ------------------------------------------------------------------------------------ ###
