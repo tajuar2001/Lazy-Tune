@@ -11,16 +11,13 @@ buffer_size = 128
 sox_command = ["rec", "--buffer", str(buffer_size), "-r", "48000", "-t", "raw", "-e", "signed", "-b", "16", "-c", "1", "-"]
 
 # Define basic LPF
-def low_pass_filter(data, cutoff_frequency, sampling_frequency):
-    # Design the Butterworth low-pass filter
-    nyquist = 0.5 * sampling_frequency
-    normal_cutoff = cutoff_frequency / nyquist
-    b, a = signal.butter(4, normal_cutoff, btype='low', analog=False)
-    
-    # Apply the filter to the data
-    filtered_data = signal.filtfilt(b, a, data)
-    
-    return filtered_data
+def lpf(signal, cutoff_frequency):
+    fft_result = np.fft.fft(signal)
+    cutoff_idx = int(cutoff_frequency * len(fft_result) / 48000)
+    fft_result[:cutoff_idx] = 0
+    fft_result[-cutoff_idx:] = 0
+
+    return np.fft.ifft(fft_result)
     
 
 # Define a function to process the audio chunk
@@ -32,8 +29,8 @@ def process_audio_chunk(chunk):
 
         ### ------------------------------------------------------------------------------------ ###
 
-    #processed_chunk = low_pass_filter(chunk, 200, 48000)
-    processed_chunk = chunk
+    processed_chunk = lpf(chunk, 120)
+    #processed_chunk = chunk
 
     processed_chunk = processed_chunk.astype(np.int16).tobytes()
         ### ------------------------------------------------------------------------------------ ###
