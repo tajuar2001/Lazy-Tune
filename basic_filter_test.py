@@ -4,19 +4,23 @@ import pyaudio
 import numpy as np
 import matplotlib.pyplot as plt
 
+from scipy import signal
+
 # Set up the SoX command
 buffer_size = 128
 sox_command = ["rec", "--buffer", str(buffer_size), "-r", "48000", "-t", "raw", "-e", "signed", "-b", "16", "-c", "1", "-"]
 
 # Define basic LPF
-def lpf(signal, cutoff_frequency):
-    fft_result = np.fft.fft(signal)
-    cutoff_idx = int(cutoff_frequency * len(fft_result) / 48000)
-
-    fft_result[:cutoff_idx] = 0
-    fft_result[-cutoff_idx:] = 0
-
-    return (np.fft.ifft(fft_result))
+def low_pass_filter(data, cutoff_frequency, sampling_frequency):
+    # Design the Butterworth low-pass filter
+    nyquist = 0.5 * sampling_frequency
+    normal_cutoff = cutoff_frequency / nyquist
+    b, a = signal.butter(4, normal_cutoff, btype='low', analog=False)
+    
+    # Apply the filter to the data
+    filtered_data = signal.filtfilt(b, a, data)
+    
+    return filtered_data
     
 
 # Define a function to process the audio chunk
@@ -28,10 +32,10 @@ def process_audio_chunk(chunk):
 
         ### ------------------------------------------------------------------------------------ ###
 
-    processed_chunk = lpf(numeric_array, 200) # formant_flag=1 (no correction), 0=following methods=0 cepstrum, 1=cepstrum_new, 2=psola
+    processed_chunk = low_pass_filter(numeric_array, 200, 48000)
 
         ### ------------------------------------------------------------------------------------ ###
-    return processed_chunk[::-1].tobytes()
+    return processed_chunk
 
 # Start the SoX process
 process = subprocess.Popen(sox_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
