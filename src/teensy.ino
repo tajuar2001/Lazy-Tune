@@ -10,7 +10,6 @@ AudioEffectFlange flange1;
 AudioEffectReverb reverb1;
 AudioMixer4 mixer1;
 AudioOutputI2S i2s2;
-AudioSynthSimpleDrum drum1;     
 AudioControlSGTL5000 sgtl5000_1;
 AudioConnection patchCords[7] = {
   AudioConnection(i2s1, 0, flange1, 0),
@@ -19,8 +18,7 @@ AudioConnection patchCords[7] = {
   AudioConnection(flange1, 0, mixer1, 0),
   AudioConnection(reverb1, 0, mixer1, 1),
   AudioConnection(mixer1, 0, i2s2, 0),
-  AudioConnection(mixer1, 0, i2s2, 1),
-  AudioConnection(drum1, mixer1)
+  AudioConnection(mixer1, 0, i2s2, 1)
 };
 
 
@@ -31,7 +29,7 @@ short flangeBuffer[FLANGE_BUFFER_SIZE];
 // Setup routine
 void setup() {
   Serial.begin(9600);
-  AudioMemory(20);
+  AudioMemory(12);
 
   sgtl5000_1.enable();
   sgtl5000_1.volume(1);
@@ -41,13 +39,6 @@ void setup() {
 
   // Initialize flanger
   flange1.begin(flangeBuffer, FLANGE_BUFFER_SIZE, 100, 100, 100);
-
-  // Initialize drum setting 
-
-  drum1.frequency(60);
-  drum1.length(200);
-  drum1.pitchMod(0.5);
-
 }
 
 // Loop routine
@@ -61,7 +52,6 @@ void initializeMixerGains() {
   mixer1.gain(0, 0); // Flange
   mixer1.gain(1, 0); // Reverb
   mixer1.gain(2, 0); // Dry
-  mixer1.gain(3, 0); // Drum
 }
 
 // Read and apply serial commands
@@ -93,11 +83,9 @@ void applySerialCommand(const char *command) {
     case 'f': setMixerGain(0, command + 1); break;
     case 'r': setMixerGain(1, command + 1); break;
     case 'd': setMixerGain(2, command + 1); break;
-    case 'p': triggerDrum; break;
     default: Serial.println("Invalid effect type"); break;
   }
 }
-
 
 // Set mixer gain
 void setMixerGain(uint8_t channel, const char *gainStr) {
@@ -109,10 +97,4 @@ void setMixerGain(uint8_t channel, const char *gainStr) {
   Serial.print(channel);
   Serial.print(" gain set to ");
   Serial.println(gainValue);
-}
-
-// Trigger drum
-
-void triggerDrum() {
-  drum1.noteOn();
 }
