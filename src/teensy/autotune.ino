@@ -5,16 +5,9 @@
 class AudioEffectGranular : public AudioStream {
 public:
     AudioEffectGranular() : AudioStream(1, inputQueueArray) { }
-    void begin(int16_t *sample_bank_def, int16_t max_len_def);
-    void setSpeed(float ratio);
-    void beginFreeze(float grain_length);
-    void beginPitchShift(float grain_length);
-    void stop();
     virtual void update(void);
 
 private:
-    void beginFreeze_int(int grain_samples);
-    void beginPitchShift_int(int grain_samples);
     void processFreeze(audio_block_t *block); // Implementation placeholder
     void processPitchShift(audio_block_t *block); // Implementation placeholder
 
