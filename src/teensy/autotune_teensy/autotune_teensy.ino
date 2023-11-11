@@ -6,8 +6,7 @@
 #include "autotune.h"
 
 // Audio Components and Autotune Instance
-AudioInputI2S i2s1; // Assuming you're using I2S for audio input
-// ... (Other audio components if necessary)
+AudioInputI2S i2s1; // Assuming we using I2S for audio input
 Autotune autotuner;
 
 // Buffer to hold audio data for autotune processing
