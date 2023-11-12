@@ -1,9 +1,5 @@
 #include "autotune.h"
 
-#include <cmath>
-#include <algorithm>
-#include <vector>
-
 // Variable Definitions
 float sample_rate = 48000; // KHz, may need to adjust this
 arm_rfft_fast_instance_f32 fftConfig;
@@ -69,8 +65,75 @@ void Autotune::autotuneOriginal(int16_t* micSignal, size_t signalLength) {
 
 // Cepstrum Domain Correction
 void Autotune::autotuneCepstrum(int16_t* micSignal, size_t signalLength) {
-    // Cepstrum autotune implementation
-    // ...
+    // Clone the micSignal for processing
+    int16_t* newSignal = new int16_t[signalLength];
+    memcpy(newSignal, micSignal, signalLength * sizeof(int16_t));
+
+    // Convert micSignal to float array
+    for (size_t i = 0; i < signalLength; ++i) {
+        myfftInput[i] = static_cast<float32_t>(micSignal[i]);
+    }
+
+    // Perform FFT on the original signal and save the result
+    float32_t originalFFTOutput[2 * FFT_SIZE];
+    arm_rfft_fast_f32(&fftConfig, myfftInput, originalFFTOutput, 0);
+
+
+    // Create newSignal using basic autotune function
+    Autotune::autotuneOriginal(newSignal, signalLength);
+
+    // Convert newSignal to float array
+    for (size_t i = 0; i < signalLength; ++i) {
+        myfftInput[i] = static_cast<float32_t>(newSignal[i]);
+    }
+
+    // Perform FFT on the shifted signal
+    arm_rfft_fast_f32(&fftConfig, myfftInput, myfftOutput, 0);
+
+    // Calculate cepstrum of the original and shifted signals
+    float32_t cepstrum1[FFT_SIZE];
+    float32_t cepstrum2[FFT_SIZE];
+    // Find the cepstrum of the original and shifted chunks
+    for (size_t i = 0; i < FFT_SIZE; ++i) {
+        cepstrum1[i] = log(1e-9 + abs(originalFFTOutput[i]));
+        cepstrum2[i] = log(1e-9 + abs(myfftOutput[i]));
+    }
+
+    // Cut the cepstrum to get only 50 indexes in the middle
+    size_t middle = (FFT_SIZE - 50) / 2;
+    float32_t cut_original[50];
+    float32_t cut_shifted[50];
+    arm_copy_f32(&cepstrum1[middle], cut_original, 50);
+    arm_copy_f32(&cepstrum2[middle], cut_shifted, 50);
+
+    // Extract the envelope from the cut window
+    float32_t envelope1[FFT_SIZE];
+    float32_t envelope2[FFT_SIZE];
+    arm_cmplx_mag_f32(cut_original, envelope1, 50);
+    arm_cmplx_mag_f32(cut_shifted, envelope2, 50);
+
+    // Find the correction factor from the two envelopes
+    float32_t correction_factor[FFT_SIZE];
+    for (size_t i = 0; i < FFT_SIZE; ++i) {
+        correction_factor[i] = envelope1[i] / envelope2[i];
+    }
+
+    // Perform linear interpolation so that correction_factor matches myfftOutput
+    // TODO
+
+    // Apply correction to the shifted signal
+    arm_mult_f32(myfftOutput, correction_factor, myfftOutput, FFT_SIZE);
+
+    // Perform IFFT
+    arm_rfft_fast_f32(&fftConfig, myfftOutput, myfftInput, 1);
+
+    // Copy the result back to micSignal
+    for (size_t i = 0; i < signalLength; ++i) {
+        micSignal[i] = static_cast<int16_t>(myfftInput[i]);
+    }
+
+    // Clean up
+    delete[] newSignal;
 }
 
 // Method #2

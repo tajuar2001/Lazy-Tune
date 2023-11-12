@@ -1,10 +1,16 @@
 #ifndef AUTOTUNE_H
 #define AUTOTUNE_H
 
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <cstring>
+
 #include <Arduino.h>
 #include <Audio.h>
 
 #include "arm_math.h"
+#include "arm_common_tables.h"
 
 extern float sample_rate; // Declare as extern
 
