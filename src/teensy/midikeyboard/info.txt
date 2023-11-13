@@ -7,3 +7,5 @@ aconnect <input_client>:<input_port> <output_client>:<output_port> (teensy)
 
 aconnect 20:0 28:0 if midi 20 and teeny 28
 
+
+teensy needs to be on /dev/ttyACM0

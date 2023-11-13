@@ -1,29 +1,14 @@
-#include <MIDI.h>
-MIDI_CREATE_DEFAULT_INSTANCE();
+#connecting midi signal from raspberry pi to teensyimport mido
+import mido
 
-void setup() {
-    Serial.begin(115200);  // Start serial communication
-    MIDI.begin(MIDI_CHANNEL_OMNI); // Start MIDI listening on all channels
-    // Other setup code...
-}
+keyboard_port_name = 'MPKmini2 MIDI 1'  # Replace with your keyboard's MIDI port name
+teensy_port_name = 'Teensy MIDI MIDI 1'  # Replace with your Teensy's MIDI port name
 
-void loop() {
-    // Handle serial communication
-    if (Serial.available()) {
-        // Read and process serial data
-    }
+try:
+    with mido.open_input(keyboard_port_name) as inport, mido.open_output(teensy_port_name) as outport:
+        print(f"Forwarding MIDI messages from {keyboard_port_name} to {teensy_port_name}")
+        for msg in inport:
+            outport.send(msg)
 
-    // Handle MIDI messages
-    if (MIDI.read()) {
-        // Process MIDI messages
-        unsigned char type = MIDI.getType();
-        unsigned char channel = MIDI.getChannel();
-        unsigned char data1 = MIDI.getData1();
-        unsigned char data2 = MIDI.getData2();
-
-        // Example: If note on message, do something
-        if (type == midi::NoteOn) {
-            // Handle note on
-        }
-    }
-}
+except (IOError, OSError) as e:
+    print(f"Error: {e}")
