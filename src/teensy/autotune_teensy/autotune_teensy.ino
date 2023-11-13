@@ -7,7 +7,14 @@
 
 // Audio Components and Autotune Instance
 AudioInputI2S i2s1; // Assuming we using I2S for audio input
-Autotune autotuner;
+CustomAutoTune autotuner;
+AudioOutputI2S i2s2;
+
+AudioConnection patchCords[3] {
+  AudioConnection(i2s1, 0, autotuner, 0),
+  AudioConnection(autotuner, 0, i2s2, 0),
+  AudioConnection(autotuner, 0, i2s2, 1)
+};
 
 // Buffer to hold audio data for autotune processing
 const size_t signalLength = 1024;
@@ -21,6 +28,8 @@ void setup() {
     Serial.begin(115200); // Start serial communication at a higher baud rate
     AudioMemory(12); // Allocate memory for audio processing
     // Additional setup code for audio components goes here
+
+    autotuner.option_edit(autotuneMethod::original);
 }
 
 void loop() {
@@ -34,7 +43,9 @@ void processAudio() {
     // For now, we're assuming micSignal is filled elsewhere in your code
 
     // Once micSignal is filled with audio data, you can process it
-    autotuner.autotuneOriginal(micSignal, signalLength);
+
+    // EDIT: I think this is unnecessary due to the AudioConnection update() command
+    //autotuner.autotuneOriginal(micSignal, signalLength);
 
     // Additional processing and output code goes here
 }
@@ -44,6 +55,8 @@ void readAndExecuteCommands() {
     if (Serial.available()) {
         String command = Serial.readStringUntil('\n');
         executeCommand(command);
+
+        // TODO: add commands to edit autotune options
     }
 }
 
