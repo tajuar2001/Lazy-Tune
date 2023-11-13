@@ -1,0 +1,39 @@
+MIDI Setup on Raspberry Pi with Teensy
+
+Follow these steps to set up your MIDI keyboard with Teensy on a Raspberry Pi.
+
+Step 1: Install ALSA Utilities
+
+ALSA utilities help manage sound devices on Linux. Install them with:
+
+sudo apt-get update
+sudo apt-get install -y alsa-utils
+
+Step 2: Locate MIDI Devices
+
+List all connected MIDI devices to find your keyboard and Teensy ports:
+
+aconnect -l
+
+You will see output like this:
+
+client 14: 'Midi Through' [type=kernel]
+    0 'Midi Through Port-0'
+client 24: 'MPKmini2' [type=kernel,card=2]
+    0 'MPKmini2 MIDI 1 '
+client 28: 'Teensy MIDI' [type=kernel,card=3]
+    0 'Teensy MIDI MIDI 1'
+
+Step 3: Connect MIDI Keyboard to Teensy
+
+Use the aconnect command to connect the MIDI keyboard to the Teensy:
+
+aconnect <input_client>:<input_port> <output_client>:<output_port>
+
+For example:
+
+aconnect 24:0 28:0
+
+Step 4: Verify Teensy Serial Port
+
+Ensure the Teensy is connected to the Raspberry Pi and set to SERIAL+MIDI mode in the Arduino IDE. The Teensy should be accessible via /dev/ttyACM0.
