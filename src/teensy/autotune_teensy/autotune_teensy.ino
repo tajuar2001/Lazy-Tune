@@ -16,38 +16,19 @@ AudioConnection patchCords[3] {
   AudioConnection(autotuner, 0, i2s2, 1)
 };
 
-// Buffer to hold audio data for autotune processing
-const size_t signalLength = 1024;
-int16_t micSignal[signalLength];
-
 // Function declarations
 void processAudio(); // Function to process and autotune audio
 void readAndExecuteCommands(); // Function to read serial commands and execute them
 
 void setup() {
-    Serial.begin(115200); // Start serial communication at a higher baud rate
+    Serial.flush();
+    Serial.begin(9600); // Start serial communication at a higher baud rate
     AudioMemory(12); // Allocate memory for audio processing
     // Additional setup code for audio components goes here
-
-    autotuner.option_edit(autotuneMethod::original);
 }
 
 void loop() {
-    processAudio(); // Process and autotune the audio
     readAndExecuteCommands(); // Check for and execute serial commands
-}
-
-// Function to process and autotune audio
-void processAudio() {
-    // Here you would add code to fill micSignal with actual audio data
-    // For now, we're assuming micSignal is filled elsewhere in your code
-
-    // Once micSignal is filled with audio data, you can process it
-
-    // EDIT: I think this is unnecessary due to the AudioConnection update() command
-    //autotuner.autotuneOriginal(micSignal, signalLength);
-
-    // Additional processing and output code goes here
 }
 
 // Function to read serial commands and execute them
@@ -55,8 +36,6 @@ void readAndExecuteCommands() {
     if (Serial.available()) {
         String command = Serial.readStringUntil('\n');
         executeCommand(command);
-
-        // TODO: add commands to edit autotune options
     }
 }
 
@@ -69,8 +48,31 @@ void executeCommand(const String& command) {
         String parameter = command.substring(9);
         if (parameter == "on") {
             // Turn on autotune
+            Serial.println("autotune on");
+            autotuner.option_edit(autotuneMethod::original);
+        } else if (parameter == "cepstrum") {
+            // Turn on cepstrum meethod
+            Serial.println("cepstrum on");
+            autotuner.option_edit(autotuneMethod::cepstrum);
+        } else if (parameter == "psola") {
+            // Turn on psola method
+            Serial.println("psola on (NYI)");
         } else if (parameter == "off") {
             // Turn off autotune
+            Serial.println("autotune off");
+            autotuner.option_edit(autotuneMethod::none);
+        } else if (parameter.startsWith("manual")) {
+            // Parse the target frequency from the command
+            float32_t targetFrequency = parameter.substring(6).toFloat();
+            
+            // Check if the target frequency is a valid number
+            if (!isnan(targetFrequency)) {
+                Serial.println("manual mode with target frequency: " + String(targetFrequency));
+                autotuner.option_edit(autotuneMethod::manual);
+                autotuner.set_frequency(targetFrequency);
+            } else {
+                Serial.println("Invalid target frequency");
+            }
         }
         // Add other parameters as needed
     } else {
