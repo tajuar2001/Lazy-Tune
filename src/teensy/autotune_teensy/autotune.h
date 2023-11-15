@@ -10,6 +10,19 @@
 #include <AudioStream.h>
 #include <Audio.h>
 
+// -------------------------------
+#include <string.h>
+#include <math.h>
+#include <stdio.h>
+
+#define M_PI 3.14159265358979323846
+#define MAX_FRAME_LENGTH 8192
+
+void smbFft(float *fftBuffer, long fftFrameSize, long sign);
+double smbAtan2(double x, double y);
+// -------------------------------
+
+
 #include "arm_math.h"
 #include "arm_common_tables.h"
 
@@ -18,22 +31,17 @@
 
 enum autotuneMethod { none, original, cepstrum, psola, manual };
 
-// FFT configuration structure
-extern arm_rfft_fast_instance_f32 fftConfig; // Declare as extern
-
-// Buffers
-extern float32_t myfftInput[AUTOTUNE_FFT_SIZE]; // Declare as extern
-extern float32_t myfftOutput[2 * AUTOTUNE_FFT_SIZE]; // Declare as extern
-
 class CustomAutoTune : public AudioStream {
 public:
     CustomAutoTune(void): AudioStream(1,inputQueueArray) {
       // any extra initialization
-      arm_rfft_fast_init_f32(&fftConfig, AUTOTUNE_FFT_SIZE);
     }
 
     // AudioStream object updater
     virtual void update(void);
+
+    /* Public Parameters */
+    float currFrequency;
 
     /* Controls */
     // option editor (true if successful, false otherwise)
@@ -44,24 +52,20 @@ public:
     }
 
     /* AutoTune */
-    void pitchShift(float targetPitch, float32_t*& micSignal, size_t signalLength);
-    float shiftToNearestSemitone(float noteFrequency);
-    void autotuneManualMode(float32_t*& micSignal, size_t signalLength);
+    float computeNearestSemitone(float noteFrequency);
+    void pitchShift(float targetPitch, float* indata, float* outdata);
+    void autotuneManualMode(float* micSignal);
     // autotune implementations
-    void autotuneOriginal(float32_t*& micSignal, size_t signalLength);
-    void autotuneCepstrum(float32_t*& micSignal, size_t signalLength);
-    void autotunePSOLA(float *input, float *output, int bufferSize, float pitchFactor);
+    void autotuneOriginal(float* micSignal);
+    void autotuneCepstrum(float32_t* micSignal, size_t signalLength);
+    void autotunePSOLA(int* input, int Fs, float inputPitch, float desiredPitch);
 
 private:
     audio_block_t *inputQueueArray[1];
-    arm_rfft_fast_instance_f32 fftConfig;
-    autotuneMethod currMethod = autotuneMethod::none;
-    float32_t myfftInput[AUTOTUNE_FFT_SIZE];
-    float32_t myfftOutput[2 * AUTOTUNE_FFT_SIZE];
-    float32_t manualFrequency = 440;
-
+    autotuneMethod currMethod;
+    float32_t manualFrequency;
+    
     // functions
-    float calculatePitch(float32_t* signal, size_t signalLength);
     void interpolate(float32_t* input, size_t inLength, float32_t* output, size_t outLength, float factor);
 };
 
