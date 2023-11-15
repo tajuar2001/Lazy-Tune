@@ -1,31 +1,53 @@
 import tkinter as tk
 
-class InteractiveBoard(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Interactive Board")
+# Function to create a vertical slider
+def create_slider(root, label, from_, to):
+    frame = tk.Frame(root)
+    frame.pack(side=tk.TOP, padx=10, pady=10)
+    tk.Label(frame, text=label).pack()
+    slider = tk.Scale(frame, from_=from_, to=to, orient=tk.VERTICAL, resolution=0.01, command=lambda value, l=label: print_slider_value(l, value))
+    slider.set(0.5)  # Default value
+    slider.pack()
+    return slider
 
-        # Configure the grid layout
-        self.buttons = {}  # Keep a reference to the buttons
-        for row in range(2):
-            for column in range(10):
-                button = tk.Button(self, text=f"Button {row},{column}",
-                                   command=lambda r=row, c=column: self.button_pressed(r, c))
-                button.grid(row=row, column=column, sticky="nsew")
-                self.buttons[(row, column)] = button
+# Function to create a toggle button
+def create_toggle_button(root, text):
+    button = tk.Button(root, text=text, command=lambda: toggle_button(button))
+    button.state = False
+    button.base_text = text
+    button.pack(side=tk.LEFT, padx=10)
+    return button
 
-        # Make the grid cells expand equally
-        for row in range(2):
-            self.grid_rowconfigure(row, weight=1)
-        for column in range(10):
-            self.grid_columnconfigure(column, weight=1)
+# Function to toggle the button state and print the state
+def toggle_button(button):
+    button.state = not button.state
+    button["text"] = f"{button.base_text} {'ON' if button.state else 'OFF'}"
+    print(f"{button.base_text} {'enabled' if button.state else 'disabled'}")
 
-    def button_pressed(self, row, column):
-        # This function is called whenever a button is pressed
-        print(f"Button at row {row}, column {column} was pressed.")
-        # You can also change the button text, color, etc.
-        self.buttons[(row, column)].config(text="Pressed", bg="green")
+# Function to print the slider value
+def print_slider_value(label, value):
+    print(f"{label} set to {value}")
 
-if __name__ == "__main__":
-    app = InteractiveBoard()
-    app.mainloop()
+# Initialize main window
+root = tk.Tk()
+root.title("Touch Screen Control Panel")
+
+# Create a frame for sliders and place it at the top
+sliders_frame = tk.Frame(root)
+sliders_frame.pack(side=tk.TOP)
+
+# Create vertical sliders within the sliders frame
+volume_slider = create_slider(sliders_frame, "Volume", 0, 1)
+modulation_slider = create_slider(sliders_frame, "Modulation", 0, 1)
+dry_signal_slider = create_slider(sliders_frame, "Dry Signal", 0, 1)
+
+# Create a frame for buttons and place it at the bottom
+buttons_frame = tk.Frame(root)
+buttons_frame.pack(side=tk.BOTTOM)
+
+# Create toggle buttons within the buttons frame
+autotune_button = create_toggle_button(buttons_frame, "Autotune")
+vocoder_button = create_toggle_button(buttons_frame, "Vocoder")
+
+# Start the GUI
+root.mainloop()

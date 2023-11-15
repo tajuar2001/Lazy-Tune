@@ -41,12 +41,12 @@ Lazytune is not just about creating music; it's about pushing the boundaries of 
 
 ## Team Contributions
 
-### Tajuar Bhuiyan [GitHub](https://github.com/tajuar2001)
+### [Tajuar Bhuiyan](https://github.com/tajuar2001)
 - **Hardware Implementation, Algorithm Development, Real-Time- Audio Processing** 
   
-### Christopher Brown [GitHub](https://github.com/chrsbrwn)
+### [Christopher Brown](https://github.com/chrsbrwn)
 - **Audio I/O, Signal Processing & Embedded Systems, Quality Assurance**
 
-### Seiya Kozakai [GitHub](https://github.com/skozakai)
+### [Seiya Kozakai](https://github.com/skozakai)
 - **Signal Processing, Algorithm Development (C/C++), Quality Assurance**
 
