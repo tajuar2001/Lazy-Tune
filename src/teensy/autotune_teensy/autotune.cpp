@@ -1,10 +1,5 @@
 #include "autotune.h"
 
-/*  COMMENTS FOR POTENTIAL FIXES
- - use arm_cfft_f32 instead of rfft.
- - try to do operations fully in 16 bit integers, or look into making more careful sure that you are not accidentally overflowing when converting values.
-*/
-
 // option selector
 boolean CustomAutoTune::option_edit(autotuneMethod method) {
   boolean all_ok = true;
@@ -29,10 +24,6 @@ boolean CustomAutoTune::option_edit(autotuneMethod method) {
         Serial.println("psola");
         break;
       }
-      case autotuneMethod::manual: {
-        Serial.println("manual");
-        break;
-      }
     } // switch
   }
 
@@ -44,7 +35,7 @@ boolean CustomAutoTune::option_edit(autotuneMethod method) {
 // main update function
 void CustomAutoTune::update(void) {
   audio_block_t *block;
- short* bp;
+  short* bp;
 
   // receive data
   block = receiveWritable(0);
@@ -56,7 +47,7 @@ void CustomAutoTune::update(void) {
 
     // convert input to floats with proper scaling
     for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
-        floatInput[i] = (float)((float)bp[i])/(32768);
+        floatInput[i] = (float)((float)bp[i])/(INT_MAX);
     }
     
     switch(currMethod) {
@@ -81,16 +72,12 @@ void CustomAutoTune::update(void) {
         // }
         break;
       }
-      case autotuneMethod::manual: {
-        CustomAutoTune::autotuneManualMode(floatInput);
-        break;
-      }
     } // switch
 
   // Convert the processed float32 signal back to the original array
   // and scale back to int16
   for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
-      bp[i] = (int16_t)(floatInput[i] * 32768); // Convert back to 16-bit int
+      bp[i] = (int16_t)(floatInput[i] * INT_MAX); // Convert back to 16-bit int
   }
     transmit(block);
     release(block);
@@ -113,11 +100,11 @@ void CustomAutoTune::update(void) {
 void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata) {
     // Calculate the pitch shift factor based on the target and current frequency
     float pitchShift = targetPitch / currFrequency;
-    pitchShift = (pitchShift < 0.51) ? 0.51 : ((pitchShift > 1.99) ? 1.99 : pitchShift);
+    pitchShift = (pitchShift < 0.6) ? 0.6 : ((pitchShift > 1.9) ? 1.9 : pitchShift);
     long numSampsToProcess = AUDIO_BLOCK_SAMPLES;
     long fftFrameSize = AUTOTUNE_FFT_SIZE;
-    long osamp = 8;
-    float sampleRate = AUTOTUNE_SAMPLING_RATE;
+    long osamp = 4;
+    float sampleRate = 44100;
 
   static float gInFIFO[MAX_FRAME_LENGTH];
   static float gOutFIFO[MAX_FRAME_LENGTH];
@@ -339,12 +326,6 @@ double smbAtan2(double x, double y)
 
 // -------------------------------
 
-
-// Autotune Manual: Pitch-Shift to Preset Target
-void CustomAutoTune::autotuneManualMode(float* micSignal) {
-  pitchShift(manualFrequency, &micSignal[0], &micSignal[0]);
-}
-
 // Autotune Original: Pitch-Shift to Nearest Frequency
 void CustomAutoTune::autotuneOriginal(float* micSignal) {
   Serial.println("autotune");
@@ -515,17 +496,3 @@ void CustomAutoTune::autotunePSOLA(int* input, int Fs, float inputPitch, float d
 //         }
 //     }
 // }
-
-/*
-  Private Functions
-*/
-void CustomAutoTune::interpolate(float32_t* input, size_t inLength, float32_t* output, size_t outLength, float factor) {
-    for (size_t i = 0; i < outLength; ++i) {
-        float index = i * factor;
-        size_t floorIndex = static_cast<size_t>(std::floor(index));
-        size_t ceilIndex = std::min(floorIndex + 1, inLength - 1);
-
-        float alpha = index - floorIndex;
-        output[i] = (1 - alpha) * input[floorIndex] + alpha * input[ceilIndex];
-    }
-}
