@@ -1,5 +1,5 @@
 import tkinter as tk
-
+import pyserial
 def main():
     window = tk.Tk()
     window.title("Dynamic Buttons")
