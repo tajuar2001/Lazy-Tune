@@ -1,17 +1,20 @@
-#include <Arduino.h>
-#include "AudioStream.h"
-#include <stdio.h>
-#include <stdint.h>
 #include <Audio.h>
+#include <MIDI.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
 
+// Define the number of voices for polyphony
+const int numVoices = 4;
+int voiceNote[numVoices] = {-1}; 
+
+// MIDI Library Initialization for USB
+MIDI_CREATE_DEFAULT_INSTANCE();
+
 // GUItool: begin automatically generated code
-AudioInputUSB            usb1;           //xy=75,316.66664028167725
-AudioSynthWavetable      wavetable1;     //xy=78.09524917602539,268.57140350341797
 AudioInputI2S            i2s1;           //xy=85.42857360839844,212.85715866088867
+AudioMixer4              mixer10;        //xy=88.8888931274414,472.22224044799805
 AudioMixer4              carrierMix;         //xy=292.857120513916,698.571361541748
 AudioFilterStateVariable filter29; //xy=297.80159759521484,933.9483222961426
 AudioFilterStateVariable filter27; //xy=298.80159759521484,873.9483222961426
@@ -60,7 +63,7 @@ AudioFilterStateVariable filter41; //xy=1009.5951766967773,827.5832996368408
 AudioFilterStateVariable filter45; //xy=1011.2617835998535,944.0277366638184
 AudioFilterStateVariable filter43; //xy=1011.5951766967773,885.5832996368408
 AudioFilterStateVariable filter47; //xy=1013.2617835998535,1002.0277366638184
-AudioEffectFade          REPLACEWITHAUTOTUNEFXN;          //xy=1112.2619171142578,259.7619171142578
+AudioEffectFade          REPLACEWITHAUTOTUNEFXN;          //xy=1020.59521484375,273.09524059295654
 AudioFilterStateVariable filter42; //xy=1134.5951766967773,826.5832996368408
 AudioFilterStateVariable filter46; //xy=1136.2617835998535,943.0277366638184
 AudioFilterStateVariable filter44; //xy=1136.5951766967773,884.5832996368408
@@ -80,125 +83,139 @@ AudioAnalyzePeak         peak11; //xy=1428.888855404324,524.7618800269233
 AudioAnalyzePeak         peak10; //xy=1429.9998478359646,466.9841147528755
 AudioAnalyzePeak         peak9; //xy=1432.2222023010254,408.09521675109863
 AudioMixer4              sourceMixer;         //xy=1597.3215637207031,256.761869430542
+AudioMixer4              master;         //xy=1810.0833587646484,913.2381114959717
+AudioMixer4              delayBus;         //xy=1816.8930740356445,644.2380867004395
 AudioEffectReverb        reverb1;        //xy=1827.6548080444336,345.42855072021484
+AudioMixer4              distortionBus;         //xy=1828.2264137268066,712.5713996887207
 AudioEffectFlange        flange1;        //xy=1830.6548080444336,297.42855072021484
 AudioEffectChorus        chorus1;        //xy=1830.6548080444336,394.42855072021484
 AudioEffectBitcrusher    bitcrusher1;    //xy=1837.6548080444336,437.42855072021484
+AudioOutputI2S           i2s2;           //xy=1840.988353729248,993.5237693786621
 AudioEffectWaveshaper    waveshape1;     //xy=1844.6548080444336,483.42855072021484
 AudioEffectWaveshaper    waveshape2;     //xy=1849.6548080444336,527.4285507202148
 AudioEffectMultiply      budgetVocoder;      //xy=1853.6548080444336,576.4285507202148
-AudioMixer4              delayBus;         //xy=2181.6548080444336,275.42855072021484
-AudioMixer4              distortionBus;         //xy=2194.6548080444336,350.42855072021484
-AudioMixer4              master;         //xy=2196.988136291504,474.4285583496094
-AudioOutputI2S           i2s2;           //xy=2205.988136291504,670.4285583496094
-AudioAmplifier           amp1;           //xy=2206.988136291504,589.4285583496094
-AudioConnection          patchCord1(usb1, 0, carrierMix, 2);
-AudioConnection          patchCord2(wavetable1, 0, carrierMix, 1);
-AudioConnection          patchCord3(i2s1, 0, sourceMixer, 0);
-AudioConnection          patchCord4(i2s1, 0, REPLACEWITHAUTOTUNEFXN, 0);
-AudioConnection          patchCord5(i2s1, 0, modulatorGain, 0);
-AudioConnection          patchCord6(i2s1, 1, carrierMix, 0);
-AudioConnection          patchCord7(carrierMix, 0, filter25, 0);
-AudioConnection          patchCord8(carrierMix, 0, filter27, 0);
-AudioConnection          patchCord9(carrierMix, 0, filter29, 0);
-AudioConnection          patchCord10(carrierMix, 0, filter31, 0);
-AudioConnection          patchCord11(carrierMix, 0, filter33, 0);
-AudioConnection          patchCord12(carrierMix, 0, filter35, 0);
-AudioConnection          patchCord13(carrierMix, 0, filter37, 0);
-AudioConnection          patchCord14(carrierMix, 0, filter39, 0);
-AudioConnection          patchCord15(carrierMix, 0, filter41, 0);
-AudioConnection          patchCord16(carrierMix, 0, filter43, 0);
-AudioConnection          patchCord17(carrierMix, 0, filter45, 0);
-AudioConnection          patchCord18(carrierMix, 0, filter47, 0);
-AudioConnection          patchCord19(carrierMix, 0, vocoderOut, 0);
-AudioConnection          patchCord20(filter29, 1, filter30, 0);
-AudioConnection          patchCord21(filter27, 1, filter28, 0);
-AudioConnection          patchCord22(filter25, 0, filter26, 0);
-AudioConnection          patchCord23(filter31, 1, filter32, 0);
-AudioConnection          patchCord24(modulatorGain, 0, filter1, 0);
-AudioConnection          patchCord25(modulatorGain, 0, filter3, 0);
-AudioConnection          patchCord26(modulatorGain, 0, filter5, 0);
-AudioConnection          patchCord27(modulatorGain, 0, filter7, 0);
-AudioConnection          patchCord28(modulatorGain, 0, filter9, 0);
-AudioConnection          patchCord29(modulatorGain, 0, filter11, 0);
-AudioConnection          patchCord30(modulatorGain, 0, filter13, 0);
-AudioConnection          patchCord31(modulatorGain, 0, filter15, 0);
-AudioConnection          patchCord32(modulatorGain, 0, filter17, 0);
-AudioConnection          patchCord33(modulatorGain, 0, filter19, 0);
-AudioConnection          patchCord34(modulatorGain, 0, filter21, 0);
-AudioConnection          patchCord35(modulatorGain, 0, filter23, 0);
-AudioConnection          patchCord36(filter5, 1, filter6, 0);
-AudioConnection          patchCord37(filter3, 1, filter4, 0);
-AudioConnection          patchCord38(filter1, 0, filter2, 0);
-AudioConnection          patchCord39(filter7, 1, filter8, 0);
-AudioConnection          patchCord40(filter30, 1, mixer6, 2);
-AudioConnection          patchCord41(filter32, 1, mixer6, 3);
-AudioConnection          patchCord42(filter28, 1, mixer6, 1);
-AudioConnection          patchCord43(filter26, 0, mixer6, 0);
-AudioConnection          patchCord44(filter6, 1, peak3, 0);
-AudioConnection          patchCord45(filter8, 1, peak4, 0);
-AudioConnection          patchCord46(filter4, 1, peak2, 0);
-AudioConnection          patchCord47(filter2, 1, peak1, 0);
-AudioConnection          patchCord48(mixer6, 0, vocoderOut, 1);
-AudioConnection          patchCord49(filter37, 1, filter38, 0);
-AudioConnection          patchCord50(filter35, 1, filter36, 0);
-AudioConnection          patchCord51(filter39, 1, filter40, 0);
-AudioConnection          patchCord52(filter33, 1, filter34, 0);
-AudioConnection          patchCord53(filter13, 1, filter14, 0);
-AudioConnection          patchCord54(filter11, 1, filter12, 0);
-AudioConnection          patchCord55(filter15, 1, filter16, 0);
-AudioConnection          patchCord56(filter9, 1, filter10, 0);
-AudioConnection          patchCord57(filter38, 1, mixer7, 2);
-AudioConnection          patchCord58(filter40, 1, mixer7, 3);
-AudioConnection          patchCord59(filter36, 1, mixer7, 1);
-AudioConnection          patchCord60(filter34, 1, mixer7, 0);
-AudioConnection          patchCord61(filter14, 1, peak7, 0);
-AudioConnection          patchCord62(filter16, 1, peak8, 0);
-AudioConnection          patchCord63(filter12, 1, peak6, 0);
-AudioConnection          patchCord64(filter10, 1, peak5, 0);
-AudioConnection          patchCord65(mixer7, 0, vocoderOut, 2);
-AudioConnection          patchCord66(filter41, 1, filter42, 0);
-AudioConnection          patchCord67(filter45, 1, filter46, 0);
-AudioConnection          patchCord68(filter43, 1, filter44, 0);
-AudioConnection          patchCord69(filter47, 1, filter48, 0);
-AudioConnection          patchCord70(REPLACEWITHAUTOTUNEFXN, 0, sourceMixer, 1);
-AudioConnection          patchCord71(filter42, 1, mixer8, 0);
-AudioConnection          patchCord72(filter46, 1, mixer8, 2);
-AudioConnection          patchCord73(filter44, 1, mixer8, 1);
-AudioConnection          patchCord74(filter48, 1, mixer8, 3);
-AudioConnection          patchCord75(filter17, 1, filter18, 0);
-AudioConnection          patchCord76(filter21, 1, filter22, 0);
-AudioConnection          patchCord77(filter19, 1, filter20, 0);
-AudioConnection          patchCord78(filter23, 1, filter24, 0);
-AudioConnection          patchCord79(filter18, 1, peak9, 0);
-AudioConnection          patchCord80(filter22, 1, peak11, 0);
-AudioConnection          patchCord81(filter20, 1, peak10, 0);
-AudioConnection          patchCord82(filter24, 2, peak12, 0);
-AudioConnection          patchCord83(mixer8, 0, vocoderOut, 3);
-AudioConnection          patchCord84(vocoderOut, 0, sourceMixer, 2);
-AudioConnection          patchCord85(sourceMixer, 0, delayBus, 0);
-AudioConnection          patchCord86(sourceMixer, flange1);
-AudioConnection          patchCord87(sourceMixer, reverb1);
-AudioConnection          patchCord88(sourceMixer, chorus1);
-AudioConnection          patchCord89(sourceMixer, bitcrusher1);
-AudioConnection          patchCord90(sourceMixer, waveshape1);
-AudioConnection          patchCord91(sourceMixer, waveshape2);
-AudioConnection          patchCord92(sourceMixer, 0, budgetVocoder, 0);
-AudioConnection          patchCord93(reverb1, 0, delayBus, 2);
-AudioConnection          patchCord94(flange1, 0, delayBus, 1);
-AudioConnection          patchCord95(chorus1, 0, delayBus, 3);
-AudioConnection          patchCord96(bitcrusher1, 0, distortionBus, 0);
-AudioConnection          patchCord97(waveshape1, 0, distortionBus, 1);
-AudioConnection          patchCord98(waveshape2, 0, distortionBus, 2);
-AudioConnection          patchCord99(budgetVocoder, 0, distortionBus, 3);
-AudioConnection          patchCord100(delayBus, 0, master, 0);
-AudioConnection          patchCord101(distortionBus, 0, master, 1);
-AudioConnection          patchCord102(master, amp1);
-AudioConnection          patchCord103(amp1, 0, i2s2, 0);
-AudioConnection          patchCord104(amp1, 0, i2s2, 1);
-AudioControlSGTL5000     sgtl5000_1;     //xy=84.5238037109375,395.6666603088379
+AudioAmplifier           amp1;           //xy=1923.892910003662,912.5237274169922
+AudioConnection          patchCord5(i2s1, 0, sourceMixer, 0);
+AudioConnection          patchCord6(i2s1, 0, REPLACEWITHAUTOTUNEFXN, 0);
+AudioConnection          patchCord7(i2s1, 0, modulatorGain, 0);
+AudioConnection          patchCord8(i2s1, 1, carrierMix, 0);
+AudioConnection          patchCord9(mixer10, 0, carrierMix, 1);
+AudioConnection          patchCord10(carrierMix, 0, filter25, 0);
+AudioConnection          patchCord11(carrierMix, 0, filter27, 0);
+AudioConnection          patchCord12(carrierMix, 0, filter29, 0);
+AudioConnection          patchCord13(carrierMix, 0, filter31, 0);
+AudioConnection          patchCord14(carrierMix, 0, filter33, 0);
+AudioConnection          patchCord15(carrierMix, 0, filter35, 0);
+AudioConnection          patchCord16(carrierMix, 0, filter37, 0);
+AudioConnection          patchCord17(carrierMix, 0, filter39, 0);
+AudioConnection          patchCord18(carrierMix, 0, filter41, 0);
+AudioConnection          patchCord19(carrierMix, 0, filter43, 0);
+AudioConnection          patchCord20(carrierMix, 0, filter45, 0);
+AudioConnection          patchCord21(carrierMix, 0, filter47, 0);
+AudioConnection          patchCord22(carrierMix, 0, vocoderOut, 0);
+AudioConnection          patchCord23(filter29, 1, filter30, 0);
+AudioConnection          patchCord24(filter27, 1, filter28, 0);
+AudioConnection          patchCord25(filter25, 0, filter26, 0);
+AudioConnection          patchCord26(filter31, 1, filter32, 0);
+AudioConnection          patchCord27(modulatorGain, 0, filter1, 0);
+AudioConnection          patchCord28(modulatorGain, 0, filter3, 0);
+AudioConnection          patchCord29(modulatorGain, 0, filter5, 0);
+AudioConnection          patchCord30(modulatorGain, 0, filter7, 0);
+AudioConnection          patchCord31(modulatorGain, 0, filter9, 0);
+AudioConnection          patchCord32(modulatorGain, 0, filter11, 0);
+AudioConnection          patchCord33(modulatorGain, 0, filter13, 0);
+AudioConnection          patchCord34(modulatorGain, 0, filter15, 0);
+AudioConnection          patchCord35(modulatorGain, 0, filter17, 0);
+AudioConnection          patchCord36(modulatorGain, 0, filter19, 0);
+AudioConnection          patchCord37(modulatorGain, 0, filter21, 0);
+AudioConnection          patchCord38(modulatorGain, 0, filter23, 0);
+AudioConnection          patchCord39(filter5, 1, filter6, 0);
+AudioConnection          patchCord40(filter3, 1, filter4, 0);
+AudioConnection          patchCord41(filter1, 0, filter2, 0);
+AudioConnection          patchCord42(filter7, 1, filter8, 0);
+AudioConnection          patchCord43(filter30, 1, mixer6, 2);
+AudioConnection          patchCord44(filter32, 1, mixer6, 3);
+AudioConnection          patchCord45(filter28, 1, mixer6, 1);
+AudioConnection          patchCord46(filter26, 0, mixer6, 0);
+AudioConnection          patchCord47(filter6, 1, peak3, 0);
+AudioConnection          patchCord48(filter8, 1, peak4, 0);
+AudioConnection          patchCord49(filter4, 1, peak2, 0);
+AudioConnection          patchCord50(filter2, 1, peak1, 0);
+AudioConnection          patchCord51(mixer6, 0, vocoderOut, 1);
+AudioConnection          patchCord52(filter37, 1, filter38, 0);
+AudioConnection          patchCord53(filter35, 1, filter36, 0);
+AudioConnection          patchCord54(filter39, 1, filter40, 0);
+AudioConnection          patchCord55(filter33, 1, filter34, 0);
+AudioConnection          patchCord56(filter13, 1, filter14, 0);
+AudioConnection          patchCord57(filter11, 1, filter12, 0);
+AudioConnection          patchCord58(filter15, 1, filter16, 0);
+AudioConnection          patchCord59(filter9, 1, filter10, 0);
+AudioConnection          patchCord60(filter38, 1, mixer7, 2);
+AudioConnection          patchCord61(filter40, 1, mixer7, 3);
+AudioConnection          patchCord62(filter36, 1, mixer7, 1);
+AudioConnection          patchCord63(filter34, 1, mixer7, 0);
+AudioConnection          patchCord64(filter14, 1, peak7, 0);
+AudioConnection          patchCord65(filter16, 1, peak8, 0);
+AudioConnection          patchCord66(filter12, 1, peak6, 0);
+AudioConnection          patchCord67(filter10, 1, peak5, 0);
+AudioConnection          patchCord68(mixer7, 0, vocoderOut, 2);
+AudioConnection          patchCord69(filter41, 1, filter42, 0);
+AudioConnection          patchCord70(filter45, 1, filter46, 0);
+AudioConnection          patchCord71(filter43, 1, filter44, 0);
+AudioConnection          patchCord72(filter47, 1, filter48, 0);
+AudioConnection          patchCord73(REPLACEWITHAUTOTUNEFXN, 0, sourceMixer, 1);
+AudioConnection          patchCord74(filter42, 1, mixer8, 0);
+AudioConnection          patchCord75(filter46, 1, mixer8, 2);
+AudioConnection          patchCord76(filter44, 1, mixer8, 1);
+AudioConnection          patchCord77(filter48, 1, mixer8, 3);
+AudioConnection          patchCord78(filter17, 1, filter18, 0);
+AudioConnection          patchCord79(filter21, 1, filter22, 0);
+AudioConnection          patchCord80(filter19, 1, filter20, 0);
+AudioConnection          patchCord81(filter23, 1, filter24, 0);
+AudioConnection          patchCord82(filter18, 1, peak9, 0);
+AudioConnection          patchCord83(filter22, 1, peak11, 0);
+AudioConnection          patchCord84(filter20, 1, peak10, 0);
+AudioConnection          patchCord85(filter24, 2, peak12, 0);
+AudioConnection          patchCord86(mixer8, 0, vocoderOut, 3);
+AudioConnection          patchCord87(vocoderOut, 0, sourceMixer, 2);
+AudioConnection          patchCord88(sourceMixer, 0, delayBus, 0);
+AudioConnection          patchCord89(sourceMixer, flange1);
+AudioConnection          patchCord90(sourceMixer, reverb1);
+AudioConnection          patchCord91(sourceMixer, chorus1);
+AudioConnection          patchCord92(sourceMixer, bitcrusher1);
+AudioConnection          patchCord93(sourceMixer, waveshape1);
+AudioConnection          patchCord94(sourceMixer, waveshape2);
+AudioConnection          patchCord95(sourceMixer, 0, budgetVocoder, 0);
+AudioConnection          patchCord96(master, amp1);
+AudioConnection          patchCord97(delayBus, 0, master, 0);
+AudioConnection          patchCord98(reverb1, 0, delayBus, 2);
+AudioConnection          patchCord99(distortionBus, 0, master, 1);
+AudioConnection          patchCord100(flange1, 0, delayBus, 1);
+AudioConnection          patchCord101(chorus1, 0, delayBus, 3);
+AudioConnection          patchCord102(bitcrusher1, 0, distortionBus, 0);
+AudioConnection          patchCord103(waveshape1, 0, distortionBus, 1);
+AudioConnection          patchCord104(waveshape2, 0, distortionBus, 2);
+AudioConnection          patchCord105(budgetVocoder, 0, distortionBus, 3);
+AudioConnection          patchCord106(amp1, 0, i2s2, 0);
+AudioConnection          patchCord107(amp1, 0, i2s2, 1);
+AudioControlSGTL5000     audioShield;     //xy=96.74602508544922,165.6666660308838
 // GUItool: end automatically generated code
 
+//Audio Components for synthesis
+AudioSynthWaveform   waveform[numVoices];  // Create an array of waveforms for polyphony
+//AudioMixer4          mixer10;                // Mix the waveforms before output
+AudioOutputI2S       audioOutput;          // Audio output
+AudioConnection      *patchCords[numVoices * 2];  // Patch cords for waveforms to mixer
+AudioConnection      patchCordToOutput(mixer10, 0, carrierMix, 1);
+
+// Array to keep track of voice usage
+bool voiceUsed[numVoices] = {false};
+
+// Define envelope for each voice
+AudioEffectEnvelope envelope[numVoices];
+
+// New patch cords for the envelope effect
+AudioConnection *patchCordsEnv[numVoices];
 
 const float res = 5;                                            // this is used as resonance value of all state variable filters
 const float attack = 0.99588;                                   // controls attack and decay, must not exceed or equal 1,
@@ -252,8 +269,22 @@ float peak1raw, peak2raw, peak3raw, peak4raw, peak5raw, peak6raw,
 float peak1val, peak2val, peak3val, peak4val, peak5val, peak6val,
   peak7val, peak8val, peak9val, peak10val, peak11val, peak12val;
 
+const int myInput = AUDIO_INPUT_MIC;
+
+void setEnvelope(float peakRaw, float &peakVal, AudioMixer4 mixer, int channel){
+  if((peakRaw * threshold) > peakVal) {
+    peakVal = peakVal / attack;
+    mixer.gain(channel, peakVal);
+  }
+  if((peak12raw * threshold) < peak12val) {
+    peakVal = peakVal * attack;
+    mixer.gain(channel, peakVal);
+  }
+}
+
 void setup() {
   Serial.begin(9600);
+  MIDI.begin(MIDI_CHANNEL_OMNI);
   delay(300);
   
   //pinMode(ledPin, OUTPUT);    // used to check timing using a oscilloscope
@@ -267,9 +298,47 @@ void setup() {
   audioShield.inputSelect(myInput);
   audioShield.volume(0.5);
 
+  //set initial mixer gains
   modulatorGain.gain(1); //gain of microphone signal (I2S left input)
-  carrierMix.gain(0, 1); //gain of carrier signal (I2S right input)
-  carrierMix.gain(1, 1); //gain of carrier signal (playing from SD card)
+  carrierMix.gain(0, 0); //gain of carrier signal (I2S right input)
+  carrierMix.gain(1, 1); //gain of carrier signal (from wave synthesis)
+  sourceMixer.gain(0, 0); //dry audio input (I2S left input)
+  sourceMixer.gain(1, 0); //autotuned audio input
+  sourceMixer.gain(2, 1); //vocoder input
+  delayBus.gain(0, 1); //dry input
+  delayBus.gain(1, 0); //reverbed input
+  delayBus.gain(2, 0); //chorus input
+  delayBus.gain(3, 0); //bitcrush input
+  distortionBus.gain(0, 0); //dry input
+  distortionBus.gain(1, 0); //reverbed input
+  distortionBus.gain(2, 0); //chorus input
+  distortionBus.gain(3, 0); //bitcrush input
+  master.gain(0, 1); //delay bus
+  master.gain(1, 1); //distortion bus
+  amp1.gain(1);
+
+  //set up waveforms and mixer
+  for (int i = 0; i < numVoices; i++) {
+    waveform[i].begin(WAVEFORM_SINE);
+    waveform[i].amplitude(0);
+    patchCords[i * 2] = new AudioConnection(waveform[i], 0, mixer10, i);
+  }
+
+  for (int i = 0; i < numVoices; i++) {
+    envelope[i].attack(10); // Attack time in milliseconds
+    envelope[i].decay(100); // Decay time
+    envelope[i].sustain(0.5); // Sustain level
+    envelope[i].release(300); // Release time
+
+    patchCordsEnv[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
+    patchCords[i * 2] = new AudioConnection(envelope[i], 0, mixer10, i);
+  }
+
+  
+  mixer10.gain(0, 0.25);
+  mixer10.gain(1, 0.25);
+  mixer10.gain(2, 0.25);
+  mixer10.gain(3, 0.25);
 
   filter1.resonance(res);    // set the resonance of the filters
   filter2.resonance(res);
@@ -382,19 +451,23 @@ void setup() {
   peak11val = 1;
   peak12val = 1;
 
+  vocoderOut.gain(0, 0); //initialize vocoder mix
+  vocoderOut.gain(1, 1);
+  vocoderOut.gain(2, 1);
+  vocoderOut.gain(3, 1);
+
   AudioProcessorUsageMaxReset();                                // and reset these things
   AudioMemoryUsageMaxReset();                                   // I'm doing this cause the source code did it idk if it's necessary
-  SPI.setMOSI(SDCARD_MOSI_PIN);
-  SPI.setSCK(SDCARD_SCK_PIN);
-  if (!(SD.begin(SDCARD_CS_PIN))) {
-    while (1) {
-       Serial.println("Unable to access the SD card");
-      delay(500);
-    }
-  }
-  delay(1000);
-}
-  
+//  SPI.setMOSI(SDCARD_MOSI_PIN);
+//  SPI.setSCK(SDCARD_SCK_PIN);
+//  if (!(SD.begin(SDCARD_CS_PIN))) {
+//    while (1) {
+//       Serial.println("Unable to access the SD card");
+//      delay(500);
+//    }
+//  }
+//  delay(1000);
+//}
 }
 
 void loop() {
@@ -403,6 +476,7 @@ void loop() {
 //    playSdWav1.play("SABER.WAV");
 //    delay(10); // wait for library to parse WAV info
 //  }
+  
   
   if(peak1.available()) {                                       // store peak values at each read
     peak1raw = peak1.read();
@@ -440,103 +514,19 @@ void loop() {
   if(peak12.available()) {
     peak12raw = peak12.read();
   }
-  
-  if((peak1raw * threshold) > peak1val) {                       // simulate envelope follower: it gets the envelope of the filtered signal through
-    peak1val = peak1val / attack;                               // the peak values and is used to determine the direction (increase or decrease) of
-    mixer6.gain(0, peak1val);                                   // the mixer gain
-  }                                                             // filters won't work here because it is implemented as a sample-and-hold code
-  if((peak1raw * threshold) < peak1val) {                       // peak values used to set mixer gain are divided to increase or multiplied to decrease
-    peak1val = peak1val * attack;                               // the values must not change fast to avoid distortion
-    mixer6.gain(0, peak1val);
-  }
-  if((peak2raw * threshold) > peak2val) {
-    peak2val = peak2val / attack;
-    mixer6.gain(1, peak2val);
-  }
-  if((peak2raw * threshold) < peak2val) {
-    peak2val = peak2val * attack;
-    mixer6.gain(1, peak2val);
-  }
-  if((peak3raw * threshold) > peak3val) {
-    peak3val = peak3val / attack;
-    mixer6.gain(2, peak3val);
-  }
-  if((peak3raw * threshold) < peak3val) {
-    peak3val = peak3val * attack;
-    mixer6.gain(2, peak3val);
-  }
-  if((peak4raw * threshold) > peak4val) {
-    peak4val = peak4val / attack;
-    mixer6.gain(3, peak4val);
-  }
-  if((peak4raw * threshold) < peak4val) {
-    peak4val = peak4val * attack;
-    mixer6.gain(3, peak4val);
-  }
-  if((peak5raw * threshold) > peak5val) {
-    peak5val = peak5val / attack;
-    mixer7.gain(0, peak5val);
-  }
-  if((peak5raw * threshold) < peak5val) {
-    peak5val = peak5val * attack;
-    mixer7.gain(0, peak5val);
-  }
-  if((peak6raw * threshold) > peak6val) {
-    peak6val = peak6val / attack;
-    mixer7.gain(1, peak6val);
-  }
-  if((peak6raw * threshold) < peak6val) {
-    peak6val = peak6val * attack;
-    mixer7.gain(1, peak6val);
-  }
-  if((peak7raw * threshold) > peak7val) {
-    peak7val = peak7val / attack;
-    mixer7.gain(2, peak7val);
-  }
-  if((peak7raw * threshold) < peak7val) {
-    peak7val = peak7val * attack;
-    mixer7.gain(2, peak7val);
-  }
-  if((peak8raw * threshold) > peak8val) {
-    peak8val = peak8val / attack;
-    mixer7.gain(0, peak8val);
-  }
-  if((peak8raw * threshold) < peak8val) {
-    peak8val = peak8val * attack;
-    mixer7.gain(0, peak8val);
-  }
-  if((peak9raw * threshold) > peak9val) {
-    peak9val = peak9val / attack;
-    mixer8.gain(1, peak9val);
-  }
-  if((peak9raw * threshold) < peak9val) {
-    peak9val = peak9val * attack;
-    mixer8.gain(1, peak9val);
-  }
-  if((peak10raw * threshold) > peak10val) {
-    peak10val = peak10val / attack;
-    mixer8.gain(2, peak10val);
-  }
-  if((peak10raw * threshold) < peak10val) {
-    peak10val = peak10val * attack;
-    mixer8.gain(2, peak10val);
-  }
-  if((peak11raw * threshold) > peak11val) {
-    peak11val = peak11val / attack;
-    mixer8.gain(3, peak11val);
-  }
-  if((peak11raw * threshold) < peak11val) {
-    peak11val = peak11val * attack;
-    mixer8.gain(3, peak11val);
-  }
-  if((peak12raw * threshold) > peak12val) {
-    peak12val = peak12val / attack;
-    mixer8.gain(0, peak12val);
-  }
-  if((peak12raw * threshold) < peak12val) {
-    peak12val = peak12val * attack;
-    mixer8.gain(0, peak12val);
-  }
+
+  setEnvelope(peak1raw, peak1val, mixer6, 0);         // simulate envelope follower: it gets the envelope of the filtered signal through
+  setEnvelope(peak2raw, peak2val, mixer6, 1);         // the peak values and is used to determine the direction (increase or decrease) of
+  setEnvelope(peak3raw, peak3val, mixer6, 2);         // the mixer gain
+  setEnvelope(peak4raw, peak4val, mixer6, 3);         // peak values used to set mixer gain are divided to increase or multiplied to decrease
+  setEnvelope(peak5raw, peak5val, mixer7, 0);         // the values must not change fast to avoid distortion
+  setEnvelope(peak6raw, peak6val, mixer7, 1);
+  setEnvelope(peak7raw, peak7val, mixer7, 2);
+  setEnvelope(peak8raw, peak8val, mixer7, 3);
+  setEnvelope(peak9raw, peak9val, mixer8, 0);
+  setEnvelope(peak10raw, peak10val, mixer8, 1);
+  setEnvelope(peak11raw, peak11val, mixer8, 2);
+  setEnvelope(peak12raw, peak12val, mixer8, 3);
  
   
 //  if(serialtimer >= 100) {                                      // and report MCU usage 10x per second
@@ -550,5 +540,5 @@ void loop() {
 //    Serial.print("\nMemory Usage Max: ");
 //    Serial.print(AudioMemoryUsageMax());
 //    Serial.print("\n\n\n\n\n\n\n\n\n\n");
-  }
+//  }
 }
