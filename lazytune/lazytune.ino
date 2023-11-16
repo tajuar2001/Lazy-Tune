@@ -1,17 +1,17 @@
 #include <Audio.h>
-#include <MIDI.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
 
+// Audio Components
 // GUItool: begin automatically generated code
-AudioSynthWaveform       waveform1;      //xy=82.22222137451172,300.63492584228516
-AudioSynthWaveform       waveform2;      //xy=82.22222518920898,337.7777862548828
-AudioSynthWaveform       waveform3;      //xy=82.22222137451172,376.666654586792
-AudioSynthWaveform       waveform4; //xy=82.77777624130249,414.4444160461426
+//AudioSynthWaveform       waveform1;      //xy=82.22222137451172,300.63492584228516
+//AudioSynthWaveform       waveform2;      //xy=82.22222518920898,337.7777862548828
+//AudioSynthWaveform       waveform3;      //xy=82.22222137451172,376.666654586792
+//AudioSynthWaveform       waveform4; //xy=82.77777624130249,414.4444160461426
 AudioInputI2S            i2s1;           //xy=85.42857360839844,212.85715866088867
-AudioMixer4              mixer10;        //xy=88.8888931274414,472.22224044799805
+//AudioMixer4              mixer10;        //xy=88.8888931274414,472.22224044799805
 AudioMixer4              carrierMix;         //xy=292.857120513916,698.571361541748
 AudioFilterStateVariable filter29; //xy=297.80159759521484,933.9483222961426
 AudioFilterStateVariable filter27; //xy=298.80159759521484,873.9483222961426
@@ -93,15 +93,15 @@ AudioOutputI2S           i2s2;           //xy=1840.988353729248,993.523769378662
 AudioEffectWaveshaper    waveshape1;     //xy=1844.6548080444336,483.42855072021484
 AudioEffectWaveshaper    waveshape2;     //xy=1849.6547393798828,527.4285278320312
 AudioAmplifier           amp1;           //xy=1923.892910003662,912.5237274169922
-AudioConnection          patchCord1(waveform1, 0, mixer10, 0);
-AudioConnection          patchCord2(waveform2, 0, mixer10, 1);
-AudioConnection          patchCord3(waveform3, 0, mixer10, 2);
-AudioConnection          patchCord4(waveform4, 0, mixer10, 3);
+//AudioConnection          patchCord1(waveform1, 0, mixer10, 0);
+//AudioConnection          patchCord2(waveform2, 0, mixer10, 1);
+//AudioConnection          patchCord3(waveform3, 0, mixer10, 2);
+//AudioConnection          patchCord4(waveform4, 0, mixer10, 3);
 AudioConnection          patchCord5(i2s1, 0, sourceMixer, 0);
 AudioConnection          patchCord6(i2s1, 0, REPLACEWITHAUTOTUNEFXN, 0);
 AudioConnection          patchCord7(i2s1, 0, modulatorGain, 0);
 AudioConnection          patchCord8(i2s1, 1, carrierMix, 0);
-AudioConnection          patchCord9(mixer10, 0, carrierMix, 1);
+//AudioConnection          patchCord9(mixer10, 0, carrierMix, 1);
 AudioConnection          patchCord10(carrierMix, 0, filter25, 0);
 AudioConnection          patchCord11(carrierMix, 0, filter27, 0);
 AudioConnection          patchCord12(carrierMix, 0, filter29, 0);
@@ -203,17 +203,12 @@ AudioConnection          patchCord107(waveshape1, 0, distortionBus, 1);
 AudioConnection          patchCord108(waveshape2, 0, distortionBus, 2);
 AudioConnection          patchCord109(amp1, 0, i2s2, 0);
 AudioConnection          patchCord110(amp1, 0, i2s2, 1);
-AudioControlSGTL5000     sgtl5000_1;     //xy=96.74602508544922,165.6666660308838
+AudioControlSGTL5000     audioShield;     //xy=96.74602508544922,165.6666660308838
 // GUItool: end automatically generated code
 
-
-//Audio Components for synthesis
-AudioSynthWaveform   waveform[numVoices];  // Create an array of waveforms for polyphony
-//AudioMixer4          mixer10;                // Mix the waveforms before output
-AudioOutputI2S       audioOutput;          // Audio output
-AudioConnection      *patchCords[numVoices * 2];  // Patch cords for waveforms to mixer
-AudioConnection      patchCordToOutput(mixer10, 0, carrierMix, 1);
-
+//
+//  SYNTHESIZER OBJECTS
+//
 // Define the number of voices for polyphony
 const int numVoices = 4;
 int voiceNote[numVoices] = {-1}; 
@@ -227,102 +222,199 @@ AudioEffectEnvelope envelope[numVoices];
 // New patch cords for the envelope effect
 AudioConnection *patchCordsEnv[numVoices];
 
-const float res = 5;                                            // this is used as resonance value of all state variable filters
-const float attack = 0.99588;                                   // controls attack and decay, must not exceed or equal 1,
-                                                                // going near 1 decreases attack, must be set at a right value to minimize distortion,
-                                                                // while still responsive to voice, this parameter is CPU speed dependent
-const float threshold = 0.1;                                    // threshold value used to limit sound levels going to mixer used as amplitude
-                                                                // modulators
+//Audio Components for synthesis
+AudioSynthWaveform   waveform[numVoices];  // Create an array of waveforms for polyphony
+AudioMixer4          synthMixer;                // Mix the waveforms before output
+AudioOutputI2S       audioOutput;          // Audio output
+AudioConnection      *patchCords[numVoices * 2];  // Patch cords for waveforms to mixer
+AudioConnection      patchCordToOutput(synthMixer, 0, carrierMix, 1);
 
-const float freq[37] = {                                        // filter frequency table, tuned to specified musical notes
-  110.0000000,  // A2   freq[0]
-  123.4708253,  // B2   freq[1]
-  138.5913155,  // C#3  freq[2]
-  155.5634919,  // D#3  freq[3]
-  174.6141157,  // F3   freq[4]
-  195.9977180,  // G3   freq[5]
-  220.0000000,  // A3   freq[6]
-  246.9416506,  // B3   freq[7]
-  277.1826310,  // C#4  freq[8]
-  311.1269837,  // D#4  freq[9]
-  349.2282314,  // F4   freq[10]
-  391.9954360,  // G4   freq[11]
-  440.0000000,  // A4   freq[12]
-  493.8833013,  // B4   freq[13]
-  554.3652620,  // C#5  freq[14]
-  622.2539674,  // D#5  freq[15]
-  698.4564629,  // F5   freq[16]
-  783.9908720,  // G5   freq[17]
-  880.0000000,  // A5   freq[18]
-  987.7666025,  // B5   freq[19]
-  1108.730524,  // C#6  freq[20]
-  1244.507935,  // D#6  freq[21]
-  1396.912926,  // F6   freq[22]
-  1567.981744,  // G6   freq[23]
-  1760.000000,  // A6   freq[24]
-  1975.533205,  // B6   freq[25]
-  2217.461048,  // C#7  freq[26]
-  2489.015870,  // D#7  freq[27]
-  2793.825851,  // F7   freq[28]
-  3135.963488,  // G7   freq[29]
-  3520.000000,  // A7   freq[30]
-  3951.066410,  // B7   freq[31]
-  4434.922096,  // C#8  freq[32]
-  4978.031740,  // D#8  freq[33]
-  5587.651703,  // F8   freq[34]
-  6271.926976,  // G8   freq[35]
-  7040.000000   // A8   freq[36]
-};
 
-float peak1raw, peak2raw, peak3raw, peak4raw, peak5raw, peak6raw,
-  peak7raw, peak8raw, peak9raw, peak10raw, peak11raw, peak12raw;
-float peak1val, peak2val, peak3val, peak4val, peak5val, peak6val,
-  peak7val, peak8val, peak9val, peak10val, peak11val, peak12val;
+// Buffers for flanger and chorus effects
+static const int FLANGE_BUFFER_SIZE = 512;
+short flangeBuffer[FLANGE_BUFFER_SIZE];
+static const int CHORUS_BUFFER_SIZE = 512;
+short chorusBuffer[CHORUS_BUFFER_SIZE];
 
-const int myInput = AUDIO_INPUT_MIC;
+//
+//    FUNCTION HEADERS
+//
+//   PRESETS AND GAIN
+//edits a mixer to set gain of each channel
+void setMixer(AudioMixer4 mixer, float c0, float c1, float c2, float c3);
 
-void setEnvelope(float peakRaw, float &peakVal, AudioMixer4 mixer, int channel);
+//initializes LazyTune with default settings. Effects at 0, microphone signal only, audio effects off.
+void Lazyinit();
 
+//initializes Vocoder filters and waveforms
+void Vocoderinit();
+
+//big reverb preset -- set reverb to max, add additional effects
+void bigReverb();
+
+//distortion preset -- set bitcrush and distortions to maxxxxx
+void distort();
+
+//set gain of effects in delay bus: 0 for reverb, 1 for flanger, 2 for freeverb, 3 for chorus
+void delayGain(short gain);
+
+//set gain of effects in distortion bus: 0 for bitcrush, c1 for waveshape, c2 for waveshape2, 3 for multiplier
+void distortGain(short gain);
+
+//set master gain - 0 for source, 1 for delay, 2 for distortion
+void masterGain(str message);
+
+//      PARAMETER EDITING
+//switch resonance values on the vocoder filters. increase resonance for narrower bands
+void vocoderResonance(str message);
+
+//set reverb1 time
+void reverbTime(str message);
+
+//set flange1 parameters (offest, depth, delayrate)
+void setFlange(str message);
+
+//set freeverb parameters (roomsize, damping)
+void setFreeverb(str message);
+
+//set number of voices in chorus
+void setChorus(str message); 
+
+//set bitdepth or bitfreq for bitcrusher effect
+void setBitcrush(str message);
+
+//set distortion for waveshape 1
+//i haven't figured out how to change waveshape effectively and may hardcode it
+void setWaveshape1(str message);
+
+//set distortion for waveshape 2
+//i haven't figured out how to change waveshape effectively and may hardcode it
+void setWaveshape1(str message);
+
+//Change waveform for all of the synthesizer voices
+void synthWaveform(short waveType);
+
+// Setup routine
 void setup() {
   Serial.begin(9600);
+  AudioMemory(64);
   MIDI.begin(MIDI_CHANNEL_OMNI);
-  delay(300);
-  
-  //pinMode(ledPin, OUTPUT);    // used to check timing using a oscilloscope
-  //pinMode(FIR_PASSTHRU, INPUT_PULLUP);
-  
-  // allocate memory for the audio library
-  AudioMemory(64);  // how memory blocks are really needed?
 
-  //initialize audioshield
-  audioShield.enable();      // configure the sgtl5000
-  audioShield.inputSelect(myInput);
-  audioShield.volume(0.5);
+  audioShield.enable();
+  audioShield.volume(1);
 
-  //set initial mixer gains
-  modulatorGain.gain(1); //gain of microphone signal (I2S left input)
-  carrierMix.gain(0, 0); //gain of carrier signal (I2S right input)
-  carrierMix.gain(1, 1); //gain of carrier signal (from wave synthesis)
-  sourceMixer.gain(0, 0); //dry audio input (I2S left input)
-  sourceMixer.gain(1, 0); //autotuned audio input
-  sourceMixer.gain(2, 1); //vocoder input
-  delayBus.gain(0, 1); //dry input
-  delayBus.gain(1, 0); //reverbed input
-  delayBus.gain(2, 0); //chorus input
-  delayBus.gain(3, 0); //bitcrush input
-  distortionBus.gain(0, 0); //dry input
-  distortionBus.gain(1, 0); //reverbed input
-  distortionBus.gain(2, 0); //chorus input
-  distortionBus.gain(3, 0); //bitcrush input
-  master.gain(0, 1); //delay bus
-  master.gain(1, 1); //distortion bus
-  amp1.gain(1);
+  // Initialize mixer gains
+  Lazyinit();
+  Vocoderinit();
 
-  //set up waveforms and mixer
+}
+
+// Loop routine
+void loop() {
+  // Read commands from Serial
+  readAndApplySerialCommands();
+}
+
+// Read and apply serial commands
+void readAndApplySerialCommands() {
+  if (Serial.available() > 0) {
+    // Read the incoming command
+    char commandBuffer[10];
+    readSerialCommand(commandBuffer, sizeof(commandBuffer));
+
+    // Parse and apply the command
+    applySerialCommand(commandBuffer);
+  }
+}
+
+// Read serial command into buffer
+void readSerialCommand(char *buffer, size_t bufferSize) {
+  size_t index = 0;
+  while (index < bufferSize - 1 && Serial.available()) {
+    char c = Serial.read();
+    if (c == '\n') break;
+    buffer[index++] = c;
+  }
+  buffer[index] = '\0'; // Null-terminate the string
+}
+
+// Parse and apply the command
+void applySerialCommand(const char *command) {
+  switch (command[0]) {
+    case 'm': setMixerGain(sourceMixer, 0, command + 1); break; //dry microphone gain
+    case 'c': setMixerGain(sourceMixer, 3, command + 1); break; //dry carrier signal gain
+    case 'a': setMixerGain(sourceMixer, 1, command + 1); break; //autotune gain
+    case 'v': setMixerGain(sourceMixer, 2, command + 1); break; //vocoder gain
+    default: Serial.println("Invalid effect type"); break;
+  }
+}
+
+
+// Set mixer gain
+void setMixerGain(AudioMixer4 mix, uint8_t channel, const char *gainStr) {
+  float gainValue = atof(gainStr);
+  mix.gain(channel, gainValue);
+
+  // Output the new gain value
+  Serial.print("Channel ");
+  Serial.print(channel);
+  Serial.print(" gain set to ");
+  Serial.println(gainValue);
+}
+
+//edits a mixer to set gain of each channel
+void setMixer(AudioMixer4 mixer, float c0, float c1, float c2, float c3){
+    mixer.gain(0, c0);
+    mixer.gain(1, c1);
+    mixer.gain(2, c2);
+    mixer.gain(3, c3);
+}
+
+//initializes LazyTune with default settings. Effects at 0, default values, audio effects off.
+void Lazyinit(){
+    //Initializer mixers and audio structures
+    setMixer(carrierMix, 0, 1, 0, 0); //channel 1 for synthesized audio, no carrier input yet
+    setMixer(sourceMixer, 1, 0, 0, 0);
+    setMixer(delayBus, 0, 0, 0, 0);
+    setMixer(distortionBus, 0, 0, 0, 0);
+    setMixer(master, 1, 0, 0);
+    //set initial gain
+    amp1.gain(1);
+    modulatorGain.gain(1);
+    //initialize effects
+    flange1.begin(flangeBuffer, FLANGE_BUFFER_SIZE, 100, 100, 100);
+    chorus1.begin(chorusBuffer, CHORUS_BUFFER_SIZE, 4);
+    //configure distortion and fuzz
+    waveshape1.shape({-1, -0.9999,-0.9996,-0.99911,-0.99841,-0.99751,-0.99642,-0.99512,-0.99362,-0.99192,-0.99001,
+                    -0.9879,-0.98558,-0.98305,-0.98032,-0.97737,-0.97421,-0.97083,-0.96724,-0.96342,-0.95938,
+                    -0.95512,-0.95062,-0.94588,-0.94091,-0.9357,-0.93024,-0.92452,-0.91855,-0.91231,-0.9058,
+                    -0.89901,-0.89193,-0.88455,-0.87688,-0.86888,-0.86055,-0.85189,-0.84287,-0.83347,-0.82369,
+                    -0.8135,-0.80287,-0.79179,-0.78022,-0.76813,-0.75549,-0.74224,-0.72834,-0.71374,-0.69835,
+                    -0.68209,-0.66486,-0.64654,-0.62696,-0.60592,-0.58315,-0.55829,-0.53083,-0.50001,-0.46465,
+                    -0.42267,-0.3698,-0.29422,0,0.29422,0.3698,0.42267,0.46465,0.50001,0.53083,0.55829,0.58315,
+                    0.60592,0.62696,0.64654,0.66486,0.68209,0.69835,0.71374,0.72834,0.74224,0.75549,0.76813,
+                    0.78022,0.79179,0.80287,0.8135,0.82369,0.83347,0.84287,0.85189,0.86055,0.86888,0.87688,
+                    0.88455,0.89193,0.89901,0.9058,0.91231,0.91855,0.92452,0.93024,0.9357,0.94091,0.94588,
+                    0.95062,0.95512,0.95938,0.96342,0.96724,0.97083,0.97421,0.97737,0.98032,0.98305,0.98558,
+                    0.9879,0.99001,0.99192,0.99362,0.99512,0.99642,0.99751,0.99841,0.99911,0.9996,0.9999,1},
+                    129);
+    waveshape2.shape({-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+                    -1,-1,-1,-1,-0.98506,-0.95937,-0.9331,-0.90628,-0.8789,-0.851,-0.82258,-0.79367,-0.76428,
+                    -0.73443,-0.70414,-0.67342,-0.6423,-0.61079,-0.57892,-0.54669,-0.51414,-0.48127,-0.44812,
+                    -0.41469,-0.38102,-0.34711,-0.313,-0.2787,-0.24423,-0.20961,-0.17487,-0.14002,-0.10509,
+                    -0.070097,-0.035059,0,0.035059,0.070097,0.10509,0.14002,0.17487,0.20961,0.24423,0.2787,
+                    0.313,0.34711,0.38102,0.41469,0.44812,0.48127,0.51414,0.54669,0.57892,0.61079,0.6423,
+                    0.67342,0.70414,0.73443,0.76428,0.79367,0.82258,0.851,0.8789,0.90628,0.9331,0.95937,
+                    0.98506,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}, 129);
+}
+
+//initializes Vocoder filters
+void Vocoderinit(){
+  // Set up waveforms and mixer
   for (int i = 0; i < numVoices; i++) {
     waveform[i].begin(WAVEFORM_SINE);
     waveform[i].amplitude(0);
-    patchCords[i * 2] = new AudioConnection(waveform[i], 0, mixer10, i);
+    patchCords[i * 2] = new AudioConnection(waveform[i], 0, synthMixer, i);
   }
 
   for (int i = 0; i < numVoices; i++) {
@@ -332,226 +424,97 @@ void setup() {
     envelope[i].release(300); // Release time
 
     patchCordsEnv[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
-    patchCords[i * 2] = new AudioConnection(envelope[i], 0, mixer10, i);
+    patchCords[i * 2] = new AudioConnection(envelope[i], 0, synthMixer, i);
   }
 
-  
-  mixer10.gain(0, 0.25);
-  mixer10.gain(1, 0.25);
-  mixer10.gain(2, 0.25);
-  mixer10.gain(3, 0.25);
+  // set the resonance of the filters
+  filter1.resonance(res); filter2.resonance(res); filter3.resonance(res); filter4.resonance(res); filter5.resonance(res);
+  filter6.resonance(res); filter7.resonance(res); filter8.resonance(res); filter9.resonance(res); filter10.resonance(res);
+  filter11.resonance(res); filter12.resonance(res); filter13.resonance(res); filter14.resonance(res); filter15.resonance(res);
+  filter16.resonance(res); filter17.resonance(res); filter18.resonance(res); filter19.resonance(res); filter20.resonance(res);
+  filter21.resonance(res); filter22.resonance(res); filter23.resonance(res); filter24.resonance(res); filter25.resonance(res);
+  filter26.resonance(res); filter27.resonance(res); filter28.resonance(res); filter29.resonance(res); filter30.resonance(res);
+  filter31.resonance(res); filter32.resonance(res); filter33.resonance(res); filter34.resonance(res); filter35.resonance(res);
+  filter36.resonance(res); filter37.resonance(res); filter38.resonance(res); filter39.resonance(res); filter40.resonance(res);
+  filter41.resonance(res); filter42.resonance(res); filter43.resonance(res); filter44.resonance(res); filter45.resonance(res);
+  filter46.resonance(res); filter47.resonance(res); filter48.resonance(res);
 
-  filter1.resonance(res);    // set the resonance of the filters
-  filter2.resonance(res);
-  filter3.resonance(res);
-  filter4.resonance(res);
-  filter5.resonance(res);
-  filter6.resonance(res);
-  filter7.resonance(res);
-  filter8.resonance(res);
-  filter9.resonance(res);
-  filter10.resonance(res);
-  filter11.resonance(res);
-  filter12.resonance(res);
-  filter13.resonance(res);
-  filter14.resonance(res);
-  filter15.resonance(res);
-  filter16.resonance(res);
-  filter17.resonance(res);
-  filter18.resonance(res);
-  filter19.resonance(res);
-  filter20.resonance(res);
-  filter21.resonance(res);
-  filter22.resonance(res);
-  filter23.resonance(res);
-  filter24.resonance(res);
-  filter25.resonance(res);
-  filter26.resonance(res);
-  filter27.resonance(res);
-  filter28.resonance(res);
-  filter29.resonance(res);
-  filter30.resonance(res);
-  filter31.resonance(res);
-  filter32.resonance(res);
-  filter33.resonance(res);
-  filter34.resonance(res);
-  filter35.resonance(res);
-  filter36.resonance(res);
-  filter37.resonance(res);
-  filter38.resonance(res);
-  filter39.resonance(res);
-  filter40.resonance(res);
-  filter41.resonance(res);
-  filter42.resonance(res);
-  filter43.resonance(res);
-  filter44.resonance(res);
-  filter45.resonance(res);
-  filter46.resonance(res);
-  filter47.resonance(res);
-  filter48.resonance(res);
+  // set the frequencies of the filters
+  // pairs of cascaded filters for optimal frequency isolation
+  // two sets of filters are used: for voice signal analysis and instrument/synth filter
+  filter1.frequency(freq[0]); filter2.frequency(freq[0]); filter3.frequency(freq[3]); filter4.frequency(freq[3]);
+  filter5.frequency(freq[6]); filter6.frequency(freq[6]); filter7.frequency(freq[9]); filter8.frequency(freq[9]);
+  filter9.frequency(freq[12]); filter10.frequency(freq[12]); filter11.frequency(freq[15]); filter12.frequency(freq[15]);
+  filter13.frequency(freq[18]); filter14.frequency(freq[18]); filter15.frequency(freq[21]); filter16.frequency(freq[21]);
+  filter17.frequency(freq[24]); filter18.frequency(freq[24]); filter19.frequency(freq[27]); filter20.frequency(freq[27]);
+  filter21.frequency(freq[30]); filter22.frequency(freq[30]); filter23.frequency(freq[33]); filter24.frequency(freq[33]);
+  filter25.frequency(freq[0]); filter26.frequency(freq[0]); filter27.frequency(freq[3]); filter28.frequency(freq[3]);
+  filter29.frequency(freq[6]); filter30.frequency(freq[6]); filter31.frequency(freq[9]); filter32.frequency(freq[9]);
+  filter33.frequency(freq[12]); filter34.frequency(freq[12]); filter35.frequency(freq[15]); filter36.frequency(freq[15]);
+  filter37.frequency(freq[18]); filter38.frequency(freq[18]); filter39.frequency(freq[21]); filter40.frequency(freq[21]);
+  filter41.frequency(freq[24]); filter42.frequency(freq[24]); filter43.frequency(freq[27]); filter44.frequency(freq[27]);
+  filter45.frequency(freq[30]); filter46.frequency(freq[30]); filter47.frequency(freq[33]); filter48.frequency(freq[33]);
 
-  filter1.frequency(freq[0]);                                   // set the frequencies of the filters
-  filter2.frequency(freq[0]);                                   // pairs of cascaded filters for optimal frequency isolation
-  filter3.frequency(freq[3]);                                   // two sets of filters are used: for voice signal analysis and instrument/synth filter
-  filter4.frequency(freq[3]);
-  filter5.frequency(freq[6]);
-  filter6.frequency(freq[6]);
-  filter7.frequency(freq[9]);
-  filter8.frequency(freq[9]);
-  filter9.frequency(freq[12]);
-  filter10.frequency(freq[12]);
-  filter11.frequency(freq[15]);
-  filter12.frequency(freq[15]);
-  filter13.frequency(freq[18]);
-  filter14.frequency(freq[18]);
-  filter15.frequency(freq[21]);
-  filter16.frequency(freq[21]);
-  filter17.frequency(freq[24]);
-  filter18.frequency(freq[24]);
-  filter19.frequency(freq[27]);
-  filter20.frequency(freq[27]);
-  filter21.frequency(freq[30]);
-  filter22.frequency(freq[30]);
-  filter23.frequency(freq[33]);
-  filter24.frequency(freq[33]);
-  filter25.frequency(freq[0]);
-  filter26.frequency(freq[0]);
-  filter27.frequency(freq[3]);
-  filter28.frequency(freq[3]);
-  filter29.frequency(freq[6]);
-  filter30.frequency(freq[6]);
-  filter31.frequency(freq[9]);
-  filter32.frequency(freq[9]);
-  filter33.frequency(freq[12]);
-  filter34.frequency(freq[12]);
-  filter35.frequency(freq[15]);
-  filter36.frequency(freq[15]);
-  filter37.frequency(freq[18]);
-  filter38.frequency(freq[18]);
-  filter39.frequency(freq[21]);
-  filter40.frequency(freq[21]);
-  filter41.frequency(freq[24]);
-  filter42.frequency(freq[24]);
-  filter43.frequency(freq[27]);
-  filter44.frequency(freq[27]);
-  filter45.frequency(freq[30]);
-  filter46.frequency(freq[30]);
-  filter47.frequency(freq[33]);
-  filter48.frequency(freq[33]);
+  //// initialize peak values
+  peak1val = 1; peak2val = 1; peak3val = 1; peak4val = 1; peak5val = 1; peak6val = 1;
+  peak7val = 1; peak8val = 1; peak9val = 1; peak10val = 1; peak11val = 1; peak12val = 1;
 
-  peak1val = 1;                                                 // initialize peak values
-  peak2val = 1;
-  peak3val = 1;
-  peak4val = 1;
-  peak5val = 1;
-  peak6val = 1;
-  peak7val = 1;
-  peak8val = 1;
-  peak9val = 1;
-  peak10val = 1;
-  peak11val = 1;
-  peak12val = 1;
+  setMixer(synthMixer, 0.5, 0.5, 0.5, 0.5);
+  setMixer(vocoderOut, 1, 1, 1, 0);
+  setMixer(mixer6, 1, 1, 1, 1);
+  setMixer(mixer7, 1, 1, 1, 1);
+  setMixer(mixer8, 1, 1, 1, 1);
 
-  vocoderOut.gain(0, 0); //initialize vocoder mix
-  vocoderOut.gain(1, 1);
-  vocoderOut.gain(2, 1);
-  vocoderOut.gain(3, 1);
-
-  AudioProcessorUsageMaxReset();                                // and reset these things
-  AudioMemoryUsageMaxReset();                                   // I'm doing this cause the source code did it idk if it's necessary
-//  SPI.setMOSI(SDCARD_MOSI_PIN);
-//  SPI.setSCK(SDCARD_SCK_PIN);
-//  if (!(SD.begin(SDCARD_CS_PIN))) {
-//    while (1) {
-//       Serial.println("Unable to access the SD card");
-//      delay(500);
-//    }
-//  }
-//  delay(1000);
-//}
 }
 
-void loop() {
-//  if(playSdWav1.isPlaying() == false) {     //uncomment if we're using SD card to play
-//    Serial.println("Start playing");
-//    playSdWav1.play("SABER.WAV");
-//    delay(10); // wait for library to parse WAV info
-//  }
-  
-  
-  if(peak1.available()) {                                       // store peak values at each read
-    peak1raw = peak1.read();
-  }
-  if(peak2.available()) {
-    peak2raw = peak2.read();
-  }
-  if(peak3.available()) {
-    peak3raw = peak3.read();
-  }
-  if(peak4.available()) {
-    peak4raw = peak4.read();
-  }
-  if(peak5.available()) {
-    peak5raw = peak5.read();
-  }
-  if(peak6.available()) {
-    peak6raw = peak6.read();
-  }
-  if(peak7.available()) {
-    peak7raw = peak7.read();
-  }
-  if(peak8.available()) {
-    peak8raw = peak8.read();
-  }
-  if(peak9.available()) {
-    peak9raw = peak9.read();
-  }
-  if(peak10.available()) {
-    peak10raw = peak10.read();
-  }
-  if(peak11.available()) {
-    peak11raw = peak11.read();
-  }
-  if(peak12.available()) {
-    peak12raw = peak12.read();
-  }
-
-  setEnvelope(peak1raw, peak1val, mixer6, 0);         // simulate envelope follower: it gets the envelope of the filtered signal through
-  setEnvelope(peak2raw, peak2val, mixer6, 1);         // the peak values and is used to determine the direction (increase or decrease) of
-  setEnvelope(peak3raw, peak3val, mixer6, 2);         // the mixer gain
-  setEnvelope(peak4raw, peak4val, mixer6, 3);         // peak values used to set mixer gain are divided to increase or multiplied to decrease
-  setEnvelope(peak5raw, peak5val, mixer7, 0);         // the values must not change fast to avoid distortion
-  setEnvelope(peak6raw, peak6val, mixer7, 1);
-  setEnvelope(peak7raw, peak7val, mixer7, 2);
-  setEnvelope(peak8raw, peak8val, mixer7, 3);
-  setEnvelope(peak9raw, peak9val, mixer8, 0);
-  setEnvelope(peak10raw, peak10val, mixer8, 1);
-  setEnvelope(peak11raw, peak11val, mixer8, 2);
-  setEnvelope(peak12raw, peak12val, mixer8, 3);
- 
-  
-//  if(serialtimer >= 100) {                                      // and report MCU usage 10x per second
-//    serialtimer = 0;
-//    Serial.print("Processor Usage: ");
-//    Serial.print(AudioProcessorUsage());
-//    Serial.print("\nProcessor Usage Max: ");
-//    Serial.print(AudioProcessorUsageMax());
-//    Serial.print("\nMemory Usage: ");
-//    Serial.print(AudioMemoryUsage());
-//    Serial.print("\nMemory Usage Max: ");
-//    Serial.print(AudioMemoryUsageMax());
-//    Serial.print("\n\n\n\n\n\n\n\n\n\n");
-//  }
+//toggle mode from dry signal to autotune to vocoder to carrier signal
+void setMode(short vocalMode){
 }
 
+//switches carrier signal from line in input to MIDI synth
+void toggleCarrier(short c_type);
 
-void setEnvelope(float peakRaw, float &peakVal, AudioMixer4 mixer, int channel){
-  if((peakRaw * threshold) > peakVal) {
-    peakVal = peakVal / attack;
-    mixer.gain(channel, peakVal);
-  }
-  if((peak12raw * threshold) < peak12val) {
-    peakVal = peakVal * attack;
-    mixer.gain(channel, peakVal);
-  }
-}
+//big reverb preset -- set reverb to max, add additional effects
+void bigReverb();
+
+//distortion preset -- set bitcrush and distortions to maxxxxx
+void distort();
+
+//set gain of effects in delay bus: 0 for reverb, 1 for flanger, 2 for freeverb, 3 for chorus
+void delayGain(short gain);
+
+//set gain of effects in distortion bus: 0 for bitcrush, c1 for waveshape, c2 for waveshape2, 3 for multiplier
+void distortGain(short gain);
+
+//set master gain - 0 for source, 1 for delay, 2 for distortion
+void masterGain(str message);
+
+//      PARAMETER EDITING
+//switch resonance values on the vocoder filters. increase resonance for narrower bands
+void vocoderResonance(str message);
+
+//set reverb1 time
+void reverbTime(str message);
+
+//set flange1 parameters (offest, depth, delayrate)
+void setFlange(str message);
+
+//set freeverb parameters (roomsize, damping)
+void setFreeverb(str message);
+
+//set number of voices in chorus
+void setChorus(str message); 
+
+//set bitdepth or bitfreq for bitcrusher effect
+void setBitcrush(str message);
+
+//set distortion for waveshape 1
+//i haven't figured out how to change waveshape effectively and may hardcode it
+void setWaveshape1(str message);
+
+//set distortion for waveshape 2
+//i haven't figured out how to change waveshape effectively and may hardcode it
+void setWaveshape1(str message);
+
+//Change waveform for all of the synthesizer voices
+void synthWaveform(short waveType);
