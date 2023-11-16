@@ -4,10 +4,14 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
+
+#include <MIDI.h>
+// MIDI Library Initialization for USB
+MIDI_CREATE_DEFAULT_INSTANCE();
 //----------------------------------------------------------
 #include "autotune.h"
 
-#define AUDIO_GUITARTUNER_BLOCKS  12 // redefinition of notefreq parameter to reduce latency
+#define AUDIO_GUITARTUNER_BLOCKS  16 // redefinition of notefreq parameter to reduce latency
 
 CustomAutoTune autotuner;
 // Audio Components
@@ -32,6 +36,7 @@ void readAndExecuteCommands(); // Function to read serial commands and execute t
 
 void setup() {
     Serial.begin(115200); // Start serial communication at a higher baud rate
+    MIDI.begin(MIDI_CHANNEL_OMNI);
     AudioMemory(31); // Allocate memory for audio processing
 
     audioShield.enable(); // audioShield initialization
@@ -42,8 +47,9 @@ void setup() {
     notefreq.begin(.15); // Initialize Yin Algorithm Absolute Threshold (15% is a good number)
 
     // autotune setup
-    autotuner.option_edit(autotuneMethod::none); // AutoTune initialization
+    autotuner.option_edit(autotuneMethod::original); // AutoTune initialization
     autotuner.currFrequency = 20;
+    autotuner.manualPitchOffset = 0;
 }
 
 void loop() {
@@ -54,9 +60,34 @@ void loop() {
       float note = notefreq.read();
       float prob = notefreq.probability();
       // Serial.printf("Note: %3.2f | Probably %.2f\n", note, prob);
-      if(prob > 0.8) {
+      if(prob > 0.9) {
         autotuner.currFrequency = note;
       }
+    }
+
+    // read midi signal 
+    if(usbMIDI.read(0)) { // Channel 0
+      switch (usbMIDI.getType()) {
+      case midi::PitchBend: { // PITCH STICK
+        int pitchValue = usbMIDI.getData1(); // The amount of bend to send (in a signed integer format), between MIDI_PITCHBEND_MIN and MIDI_PITCHBEND_MAX, center value is 0.
+        autotuner.manualPitchOffset = AUTOTUNE_MIN_PS + ((pitchValue - MIDI_PITCHBEND_MIN) / static_cast<float>(MIDI_PITCHBEND_MAX - MIDI_PITCHBEND_MIN)) * (AUTOTUNE_MAX_PS - AUTOTUNE_MIN_PS);
+        break;
+      }
+      // case midi::ControlChange:
+      //   int controlNum = usbMIDI.getData1();
+      //   int controlVal = usbMIDI.getData2();
+
+      //   Serial.print("Knob = ");
+      //   Serial.print(controlNum);
+      //   Serial.print(", Value = ");
+      //   Serial.println(controlVal);
+
+      //   if(controlNum == AUTOTUNE_MIDI_KNOB) {
+      //     // controlVal goes from 0 to 127, map it to -0.4 to 0.9
+      //     autotuner.manualPitchOffset = -0.4 + (controlVal / static_cast<float>(127)) * (0.9-(-0.4));
+      //   }
+      //   break;
+    }
     }
     //Serial.println(AudioMemoryUsageMax());
 }
@@ -71,30 +102,19 @@ void readAndExecuteCommands() {
 
 // Execute a received command
 void executeCommand(const String& command) {
-    if (command.startsWith("autotune:")) {
+    if (command.startsWith("AT_")) {
         // Parse the command to get the autotune parameters
         // Example command might be "autotune:on" or "autotune:off"
-        String parameter = command.substring(9);
+        String parameter = command.substring(3);
       
-        if (parameter == "on") {
+        if (parameter == "ON") {
             // Turn on autotune
-            Serial.println("autotune on");
+            Serial.println("Autotune Enabled");
             autotuner.option_edit(autotuneMethod::original);
-
-        } else if (parameter == "cepstrum") {
-            // Turn on cepstrum meethod
-            Serial.println("cepstrum on");
-            autotuner.option_edit(autotuneMethod::cepstrum);
-
-        } else if (parameter == "psola") {
-            // Turn on psola method
-            Serial.println("psola on (NYI)");
-
-        } else if (parameter == "off") {
+        } else if (parameter == "OFF") {
             // Turn off autotune
-            Serial.println("autotune off");
+            Serial.println("Autotune Disabled");
             autotuner.option_edit(autotuneMethod::none);
-
         }
         // Add other parameters as needed
     } else {

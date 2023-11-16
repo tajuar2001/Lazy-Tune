@@ -16,14 +16,6 @@ boolean CustomAutoTune::option_edit(autotuneMethod method) {
         Serial.println("original");
         break;
       }
-      case autotuneMethod::cepstrum: {
-        Serial.println("cepstrum");
-        break;
-      }
-      case autotuneMethod::psola: {
-        Serial.println("psola");
-        break;
-      }
     } // switch
   }
 
@@ -60,18 +52,6 @@ void CustomAutoTune::update(void) {
         CustomAutoTune::autotuneOriginal(floatInput);
         break;
       }
-      case autotuneMethod::cepstrum: {
-        //CustomAutoTune::autotuneCepstrum(floatInput, AUDIO_BLOCK_SAMPLES);
-        break;
-      }
-      case autotuneMethod::psola: {
-        // TODO
-        // CustomAutoTune::autotunePSOLA(inputBuffer, outputBuffer, BUFFER_SIZE, 0.5); // Pitch shift down by a factor of 0.5
-        // for(int i=0; i<AUDIO_BLOCK_SAMPLES; i++){
-        // floatInput[i] = outputBuffer[i];
-        // }
-        break;
-      }
     } // switch
 
   // Convert the processed float32 signal back to the original array
@@ -99,8 +79,8 @@ void CustomAutoTune::update(void) {
  // Pitch-Shift to Target Frequency
 void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata) {
     // Calculate the pitch shift factor based on the target and current frequency
-    float pitchShift = targetPitch / currFrequency;
-    pitchShift = (pitchShift < 0.6) ? 0.6 : ((pitchShift > 1.9) ? 1.9 : pitchShift);
+    float pitchShift = targetPitch / currFrequency + manualPitchOffset;
+    pitchShift = (pitchShift < AUTOTUNE_LOWER_LIMIT) ? AUTOTUNE_LOWER_LIMIT : ((pitchShift > AUTOTUNE_UPPER_LIMIT) ? AUTOTUNE_UPPER_LIMIT : pitchShift);
     long numSampsToProcess = AUDIO_BLOCK_SAMPLES;
     long fftFrameSize = AUTOTUNE_FFT_SIZE;
     long osamp = 4;
@@ -312,8 +292,7 @@ void smbFft(float *fftBuffer, long fftFrameSize, long sign) {
   }
 }
 
-double smbAtan2(double x, double y)
-{
+double smbAtan2(double x, double y) {
   double signx;
   if (x > 0.) signx = 1.;  
   else signx = -1.;
@@ -328,171 +307,9 @@ double smbAtan2(double x, double y)
 
 // Autotune Original: Pitch-Shift to Nearest Frequency
 void CustomAutoTune::autotuneOriginal(float* micSignal) {
-  Serial.println("autotune");
   // Find the nearest semitone
   float nearestSemitone = computeNearestSemitone(currFrequency);
   // Call pitchShift with the nearest semitone as targetPitch
   pitchShift(nearestSemitone, &micSignal[0], &micSignal[0]);
 }
 
-// Cepstrum Domain Correction
-void CustomAutoTune::autotuneCepstrum(float32_t* micSignal, size_t signalLength) {
-  Serial.println("cepstrum");
-    // // Clone the micSignal for processing
-    // float32_t* newSignal = new float32_t[signalLength];
-    // memcpy(newSignal, micSignal, signalLength * sizeof(float32_t));
-
-    // // Convert micSignal to float array
-    // for (size_t i = 0; i < signalLength; ++i) {
-    //     myfftInput[i] = (micSignal[i]);
-    // }
-    // for(size_t i = signalLength; i < AUTOTUNE_FFT_SIZE; ++i) {
-    //     myfftInput[i] = 0;
-    // }
-
-    // // Perform FFT on the original signal and save the result
-    // float32_t originalFFTOutput[2 * AUTOTUNE_FFT_SIZE];
-    // arm_rfft_fast_f32(&fftConfig, myfftInput, originalFFTOutput, 0);
-
-
-    // // Create newSignal using basic autotune function
-    // CustomAutoTune::autotuneOriginal(newSignal, signalLength);
-
-    // // Convert newSignal to float array
-    // for (size_t i = 0; i < signalLength; ++i) {
-    //     myfftInput[i] = (newSignal[i]);
-    // }
-
-    // // Perform FFT on the shifted signal
-    // arm_rfft_fast_f32(&fftConfig, myfftInput, myfftOutput, 0);
-
-    // // Calculate cepstrum of the original and shifted signals
-    // float32_t cepstrum1[2*AUTOTUNE_FFT_SIZE];
-    // float32_t cepstrum2[2*AUTOTUNE_FFT_SIZE];
-    // // Find the cepstrum of the original and shifted chunks
-    // for (size_t i = 0; i < 2*AUTOTUNE_FFT_SIZE; ++i) {
-    //     cepstrum1[i] = log(1e-9 + abs(originalFFTOutput[i]));
-    //     cepstrum2[i] = log(1e-9 + abs(myfftOutput[i]));
-    // }
-
-    // // Cut the cepstrum to get only 50 indexes in the middle
-    // size_t middle = (2*AUTOTUNE_FFT_SIZE - 50) / 2;
-    // float32_t cut_original[50];
-    // float32_t cut_shifted[50];
-    // arm_copy_f32(&cepstrum1[middle], cut_original, 50);
-    // arm_copy_f32(&cepstrum2[middle], cut_shifted, 50);
-
-    // // Extract the envelope from the cut window
-    // float32_t envelope1[2*AUTOTUNE_FFT_SIZE];
-    // float32_t envelope2[2*AUTOTUNE_FFT_SIZE];
-    // arm_cmplx_mag_f32(cut_original, envelope1, 50);
-    // arm_cmplx_mag_f32(cut_shifted, envelope2, 50);
-
-    // // Find the correction factor from the two envelopes
-    // float32_t correction_factor[2*AUTOTUNE_FFT_SIZE];
-    // for (size_t i = 0; i < 2*AUTOTUNE_FFT_SIZE; ++i) {
-    //     correction_factor[i] = envelope1[i] / envelope2[i];
-    // }
-
-    // // Perform linear interpolation so that correction_factor matches myfftOutput
-    // // TODO
-
-    // // Apply correction to the shifted signal
-    // arm_mult_f32(myfftOutput, correction_factor, myfftOutput, AUTOTUNE_FFT_SIZE);
-
-    // // Perform IFFT
-    // arm_rfft_fast_f32(&fftConfig, myfftOutput, myfftInput, 1);
-
-    // // Copy the result back to micSignal
-    // for (size_t i = 0; i < signalLength; ++i) {
-    //     micSignal[i] = (myfftInput[i]);
-    // }
-
-    // // Clean up
-    // delete[] newSignal;
-}
-
-// PSOLA Method
-void CustomAutoTune::autotunePSOLA(int* input, int Fs, float inputPitch, float desiredPitch) {
-    Serial.println("psola");
-  // // Percent change of frequency
-  //   float scalingFactor = 1 + (inputPitch - desiredPitch)/desiredPitch;
-  //   // PSOLA constants
-  //   int analysisShift = ceil(Fs/inputPitch);
-  //   int analysisShiftHalfed = round(analysisShift/2);
-  //   int synthesisShift = round(analysisShift*scalingFactor);
-  //   int analysisIndex = -1;
-  //   int synthesisIndex = 0;
-  //   int analysisBlockStart;
-  //   int analysisBlockEnd;
-  //   int synthesisBlockEnd;
-  //   int analysisLimit = _bufferLen - analysisShift - 1;
-  //   // Window declaration
-  //   int winLength = analysisShift + analysisShiftHalfed + 1;
-  //   int windowIndex;
-  //   bartlett(_window,winLength);
-  //   // PSOLA Algorithm
-  //   while (analysisIndex < analysisLimit) {
-  //       // Analysis blocks are two pitch periods long
-  //       analysisBlockStart = (analysisIndex + 1) - analysisShiftHalfed;
-  //       if (analysisBlockStart < 0) {
-  //           analysisBlockStart = 0;
-  //       }
-  //       analysisBlockEnd = analysisBlockStart + analysisShift + analysisShiftHalfed;
-  //       if (analysisBlockEnd > _bufferLen - 1) {
-  //           analysisBlockEnd = _bufferLen - 1;
-  //       }
-  //       // Overlap and add
-  //       synthesisBlockEnd = synthesisIndex + analysisBlockEnd - analysisBlockStart;
-  //       int inputIndex = analysisBlockStart;
-  //       int windowIndex = 0;
-  //       for (int j = synthesisIndex; j <= synthesisBlockEnd; j++) {
-  //           _buffer[j] = Q15addWrap(_buffer[j], Q15mult(input[inputIndex],_window[windowIndex]) );
-  //           inputIndex++;
-  //           windowIndex++;
-  //       }
-  //       // Update pointers
-  //       analysisIndex += analysisShift;
-  //       synthesisIndex += synthesisShift;
-  //   }
-  //   // Write back to input
-  //   for (int i = 0; i < _bufferLen; i++) {
-  //       input[i] = _buffer[i];
-  //       // clean out the buffer
-  //       _buffer[i] = 0;
-  //   }
-}
-
-// void CustomAutoTune::bartlett(int* window, int length) {
-//     if (length < 1) return;
-//     if (length == 1) {
-//         window[0] = 1;
-//         return;
-//     }
-    
-//     int N = length - 1;
-//     int middle = N >> 1;
-//     int slope = round( ((float)(1<<(FIXED_FBITS-1)))/N*4 );
-//     if (N%2 == 0) {
-//         // N even = L odd
-//         window[0] = 0;
-//         for (int i = 1; i <= middle; i++) {
-//             window[i] = window[i-1] + slope;
-//         }
-//         for (int i = middle+1; i <= N; i++) {
-//             window[i] = window[N - i];
-//         }
-//         // double check that the middle value is the maximum Q15 number
-//         window[middle] = LARGEST_Q15_NUM;
-//     } else {
-//         // N odd = L even
-//         window[0] = 0;
-//         for (int i = 1; i <= middle; i++) {
-//             window[i] = window[i-1] + slope;
-//         }
-//         window[middle + 1] = window[middle];
-//         for (int i = middle+1; i <= N; i++) {
-//             window[i] = window[N - i];
-//         }
-//     }
-// }

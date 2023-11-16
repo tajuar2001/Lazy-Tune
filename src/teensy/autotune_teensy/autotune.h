@@ -23,13 +23,19 @@ double smbAtan2(double x, double y);
 
 #define AUTOTUNE_FFT_SIZE 128
 #define AUTOTUNE_SAMPLING_RATE AUDIO_SAMPLE_RATE
+#define AUTOTUNE_LOWER_LIMIT 0.529731547
+#define AUTOTUNE_UPPER_LIMIT 1.88774863
+#define AUTOTUNE_MIN_PS -0.4
+#define AUTOTUNE_MAX_PS 0.9
 
-enum autotuneMethod { none, original, cepstrum, psola };
+enum autotuneMethod { none, original };
 
 class CustomAutoTune : public AudioStream {
 public:
     CustomAutoTune(void): AudioStream(1,inputQueueArray) {
       // any extra initialization
+      currFrequency = 20;
+      manualPitchOffset = 0;
     }
 
     // AudioStream object updater
@@ -37,6 +43,7 @@ public:
 
     /* Public Parameters */
     float currFrequency;
+    float manualPitchOffset; // -0.4 to 0.9
 
     /* Controls */
     // option editor (true if successful, false otherwise)
@@ -47,8 +54,6 @@ public:
     void pitchShift(float targetPitch, float* indata, float* outdata);
     // autotune implementations
     void autotuneOriginal(float* micSignal);
-    void autotuneCepstrum(float32_t* micSignal, size_t signalLength);
-    void autotunePSOLA(int* input, int Fs, float inputPitch, float desiredPitch);
 
 private:
     audio_block_t *inputQueueArray[1];
