@@ -2,7 +2,7 @@ import tkinter as tk
 import serial
 
 # Setup the serial connection (adjust 'COM3' and 9600 to your settings)
-
+ser = serial.Serial('COM3', 9600, timeout=1)
 
 def main():
     window = tk.Tk()
