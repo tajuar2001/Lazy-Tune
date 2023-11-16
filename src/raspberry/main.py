@@ -1,7 +1,24 @@
+import os
+import mido
+import threading
 import tkinter as tk
 from tkinter import Scale
 
-def main():
+#Setting Display Environment 
+os.environ['DISPLAY'] = ':0.0'
+
+#connecting the keyboard to the teensy
+keyboard_port_name = 'MPKmini2 MIDI 1' 
+teensy_port_name = 'Teensy MIDI MIDI 1'  
+
+def midi_forwarding_task():
+    with mido.open_input(keyboard_port_name) as inport, mido.open_output(teensy_port_name) as outport:
+        for msg in inport:
+            outport.send(msg)
+
+def main():        
+    threading.Thread(target=midi_forwarding_task, daemon=True).start()
+    
     window = tk.Tk()
     window.title("Sound Effects Controller")
     window.geometry("1200x600")  # Set window size

@@ -3,7 +3,7 @@ import tkinter as tk
 def main():
     window = tk.Tk()
     window.title("Dynamic Buttons")
-    window.geometry("600x400")  # Set window size
+    window.geometry("1200x600")  # Set window size
 
     # Function to print a custom message
     def print_message(message):
