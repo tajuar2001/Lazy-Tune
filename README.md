@@ -1,4 +1,4 @@
-# EECS 452 Project: LazyTune
+# LazyTune
 
 ![Overall System](/src/etc/System.png)
 
