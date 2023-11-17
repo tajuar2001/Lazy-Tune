@@ -42,7 +42,6 @@ def main():
             print(f"Error sending data: {e}")
 
 
-
     # Function to switch to the edit effect screen
     def show_edit_effect_screen():
         for widget in window.winfo_children():
