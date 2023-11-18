@@ -7,12 +7,16 @@
 
 //DONOT EDIT THIS BECAUSE YOU NEED IT TO GET THE SYSTEM DESIGN TOOL
 // GUItool: begin automatically generated code
-//AudioSynthWaveform       waveform1;      //xy=82.22222137451172,300.63492584228516
-//AudioSynthWaveform       waveform2;      //xy=82.22222518920898,337.7777862548828
-//AudioSynthWaveform       waveform3;      //xy=82.22222137451172,376.666654586792
-//AudioSynthWaveform       waveform4; //xy=82.77777624130249,414.4444160461426
+// AudioSynthWaveform       waveform1;      //xy=82.22222137451172,300.63492584228516
+// AudioSynthWaveform       waveform2;      //xy=82.22222518920898,337.7777862548828
+// AudioSynthWaveform       waveform3;      //xy=82.22222137451172,376.666654586792
+// AudioSynthWaveform       waveform4; //xy=82.77777624130249,414.4444160461426
 AudioInputI2S            i2s1;           //xy=85.42857360839844,212.85715866088867
-AudioMixer4              synthMixer;        //xy=88.8888931274414,472.22224044799805
+//AudioEffectEnvelope      envelope4; //xy=91.42857360839844,612.857177734375
+AudioMixer4              synthMixer;        //xy=91.74603271484375,739.365104675293
+//AudioEffectEnvelope      envelope3; //xy=95.71428680419922,574.2857055664062
+//AudioEffectEnvelope      envelope1;      //xy=97.14286041259766,500.00002098083496
+//AudioEffectEnvelope      envelope2; //xy=97.14286041259766,538.5714111328125
 AudioMixer4              carrierMix;         //xy=292.857120513916,698.571361541748
 AudioFilterStateVariable filter29; //xy=297.80159759521484,933.9483222961426
 AudioFilterStateVariable filter27; //xy=298.80159759521484,873.9483222961426
@@ -81,93 +85,98 @@ AudioAnalyzePeak         peak10; //xy=1429.9998478359646,466.9841147528755
 AudioAnalyzePeak         peak9; //xy=1432.2222023010254,408.09521675109863
 AudioAmplifier           amp1;           //xy=1562.8571395874023,768.5713920593262
 AudioOutputI2S           i2s2;           //xy=1688.5714285714284,779.9999999999999
-//AudioConnection          patchCord1(waveform1, 0, synthMixer, 0);
-//AudioConnection          patchCord2(waveform2, 0, synthMixer, 1);
-//AudioConnection          patchCord3(waveform3, 0, synthMixer, 2);
-//AudioConnection          patchCord4(waveform4, 0, synthMixer, 3);
+//AudioConnection          patchCord1(waveform1, envelope1);
+//AudioConnection          patchCord2(waveform2, envelope2);
+//AudioConnection          patchCord3(waveform3, envelope3);
+//AudioConnection          patchCord4(waveform4, envelope4);
 AudioConnection          patchCord5(i2s1, 0, modulatorGain, 0);
 AudioConnection          patchCord6(i2s1, 1, carrierMix, 0);
-AudioConnection          patchCord7(synthMixer, 0, carrierMix, 1);
-AudioConnection          patchCord8(carrierMix, 0, filter25, 0);
-AudioConnection          patchCord9(carrierMix, 0, filter27, 0);
-AudioConnection          patchCord10(carrierMix, 0, filter29, 0);
-AudioConnection          patchCord11(carrierMix, 0, filter31, 0);
-AudioConnection          patchCord12(carrierMix, 0, filter33, 0);
-AudioConnection          patchCord13(carrierMix, 0, filter35, 0);
-AudioConnection          patchCord14(carrierMix, 0, filter37, 0);
-AudioConnection          patchCord15(carrierMix, 0, filter39, 0);
-AudioConnection          patchCord16(carrierMix, 0, filter41, 0);
-AudioConnection          patchCord17(carrierMix, 0, filter43, 0);
-AudioConnection          patchCord18(carrierMix, 0, filter45, 0);
-AudioConnection          patchCord19(carrierMix, 0, filter47, 0);
-AudioConnection          patchCord20(filter29, 1, filter30, 0);
-AudioConnection          patchCord21(filter27, 1, filter28, 0);
-AudioConnection          patchCord22(filter25, 0, filter26, 0);
-AudioConnection          patchCord23(filter31, 1, filter32, 0);
-AudioConnection          patchCord24(modulatorGain, 0, filter1, 0);
-AudioConnection          patchCord25(modulatorGain, 0, filter3, 0);
-AudioConnection          patchCord26(modulatorGain, 0, filter5, 0);
-AudioConnection          patchCord27(modulatorGain, 0, filter7, 0);
-AudioConnection          patchCord28(modulatorGain, 0, filter9, 0);
-AudioConnection          patchCord29(modulatorGain, 0, filter11, 0);
-AudioConnection          patchCord30(modulatorGain, 0, filter13, 0);
-AudioConnection          patchCord31(modulatorGain, 0, filter15, 0);
-AudioConnection          patchCord32(modulatorGain, 0, filter17, 0);
-AudioConnection          patchCord33(modulatorGain, 0, filter19, 0);
-AudioConnection          patchCord34(modulatorGain, 0, filter21, 0);
-AudioConnection          patchCord35(modulatorGain, 0, filter23, 0);
-AudioConnection          patchCord36(filter5, 1, filter6, 0);
-AudioConnection          patchCord37(filter3, 1, filter4, 0);
-AudioConnection          patchCord38(filter1, 0, filter2, 0);
-AudioConnection          patchCord39(filter7, 1, filter8, 0);
-AudioConnection          patchCord40(filter30, 1, mixer6, 2);
-AudioConnection          patchCord41(filter32, 1, mixer6, 3);
-AudioConnection          patchCord42(filter28, 1, mixer6, 1);
-AudioConnection          patchCord43(filter26, 0, mixer6, 0);
-AudioConnection          patchCord44(filter6, 1, peak3, 0);
-AudioConnection          patchCord45(filter8, 1, peak4, 0);
-AudioConnection          patchCord46(filter4, 1, peak2, 0);
-AudioConnection          patchCord47(filter2, 1, peak1, 0);
-AudioConnection          patchCord48(mixer6, 0, vocoderOut, 0);
-AudioConnection          patchCord49(filter37, 1, filter38, 0);
-AudioConnection          patchCord50(filter35, 1, filter36, 0);
-AudioConnection          patchCord51(filter39, 1, filter40, 0);
-AudioConnection          patchCord52(filter33, 1, filter34, 0);
-AudioConnection          patchCord53(filter13, 1, filter14, 0);
-AudioConnection          patchCord54(filter11, 1, filter12, 0);
-AudioConnection          patchCord55(filter15, 1, filter16, 0);
-AudioConnection          patchCord56(filter9, 1, filter10, 0);
-AudioConnection          patchCord57(filter38, 1, mixer7, 2);
-AudioConnection          patchCord58(filter40, 1, mixer7, 3);
-AudioConnection          patchCord59(filter36, 1, mixer7, 1);
-AudioConnection          patchCord60(filter34, 1, mixer7, 0);
-AudioConnection          patchCord61(filter14, 1, peak7, 0);
-AudioConnection          patchCord62(filter16, 1, peak8, 0);
-AudioConnection          patchCord63(filter12, 1, peak6, 0);
-AudioConnection          patchCord64(filter10, 1, peak5, 0);
-AudioConnection          patchCord65(mixer7, 0, vocoderOut, 1);
-AudioConnection          patchCord66(filter41, 1, filter42, 0);
-AudioConnection          patchCord67(filter45, 1, filter46, 0);
-AudioConnection          patchCord68(filter43, 1, filter44, 0);
-AudioConnection          patchCord69(filter47, 1, filter48, 0);
-AudioConnection          patchCord70(filter42, 1, mixer8, 0);
-AudioConnection          patchCord71(filter46, 1, mixer8, 2);
-AudioConnection          patchCord72(filter44, 1, mixer8, 1);
-AudioConnection          patchCord73(filter48, 1, mixer8, 3);
-AudioConnection          patchCord74(filter17, 1, filter18, 0);
-AudioConnection          patchCord75(filter21, 1, filter22, 0);
-AudioConnection          patchCord76(filter19, 1, filter20, 0);
-AudioConnection          patchCord77(filter23, 1, filter24, 0);
-AudioConnection          patchCord78(filter18, 1, peak9, 0);
-AudioConnection          patchCord79(filter22, 1, peak11, 0);
-AudioConnection          patchCord80(filter20, 1, peak10, 0);
-AudioConnection          patchCord81(filter24, 2, peak12, 0);
-AudioConnection          patchCord82(mixer8, 0, vocoderOut, 2);
-AudioConnection          patchCord83(vocoderOut, amp1);
-AudioConnection          patchCord84(amp1, 0, i2s2, 0);
-AudioConnection          patchCord85(amp1, 0, i2s2, 1);
+// AudioConnection          patchCord7(envelope4, 0, synthMixer, 3);
+AudioConnection          patchCord8(synthMixer, 0, carrierMix, 1);
+// AudioConnection          patchCord9(envelope3, 0, synthMixer, 2);
+// AudioConnection          patchCord10(envelope1, 0, synthMixer, 0);
+// AudioConnection          patchCord11(envelope2, 0, synthMixer, 1);
+AudioConnection          patchCord12(carrierMix, 0, filter25, 0);
+AudioConnection          patchCord13(carrierMix, 0, filter27, 0);
+AudioConnection          patchCord14(carrierMix, 0, filter29, 0);
+AudioConnection          patchCord15(carrierMix, 0, filter31, 0);
+AudioConnection          patchCord16(carrierMix, 0, filter33, 0);
+AudioConnection          patchCord17(carrierMix, 0, filter35, 0);
+AudioConnection          patchCord18(carrierMix, 0, filter37, 0);
+AudioConnection          patchCord19(carrierMix, 0, filter39, 0);
+AudioConnection          patchCord20(carrierMix, 0, filter41, 0);
+AudioConnection          patchCord21(carrierMix, 0, filter43, 0);
+AudioConnection          patchCord22(carrierMix, 0, filter45, 0);
+AudioConnection          patchCord23(carrierMix, 0, filter47, 0);
+AudioConnection          patchCord24(filter29, 1, filter30, 0);
+AudioConnection          patchCord25(filter27, 1, filter28, 0);
+AudioConnection          patchCord26(filter25, 0, filter26, 0);
+AudioConnection          patchCord27(filter31, 1, filter32, 0);
+AudioConnection          patchCord28(modulatorGain, 0, filter1, 0);
+AudioConnection          patchCord29(modulatorGain, 0, filter3, 0);
+AudioConnection          patchCord30(modulatorGain, 0, filter5, 0);
+AudioConnection          patchCord31(modulatorGain, 0, filter7, 0);
+AudioConnection          patchCord32(modulatorGain, 0, filter9, 0);
+AudioConnection          patchCord33(modulatorGain, 0, filter11, 0);
+AudioConnection          patchCord34(modulatorGain, 0, filter13, 0);
+AudioConnection          patchCord35(modulatorGain, 0, filter15, 0);
+AudioConnection          patchCord36(modulatorGain, 0, filter17, 0);
+AudioConnection          patchCord37(modulatorGain, 0, filter19, 0);
+AudioConnection          patchCord38(modulatorGain, 0, filter21, 0);
+AudioConnection          patchCord39(modulatorGain, 0, filter23, 0);
+AudioConnection          patchCord40(filter5, 1, filter6, 0);
+AudioConnection          patchCord41(filter3, 1, filter4, 0);
+AudioConnection          patchCord42(filter1, 0, filter2, 0);
+AudioConnection          patchCord43(filter7, 1, filter8, 0);
+AudioConnection          patchCord44(filter30, 1, mixer6, 2);
+AudioConnection          patchCord45(filter32, 1, mixer6, 3);
+AudioConnection          patchCord46(filter28, 1, mixer6, 1);
+AudioConnection          patchCord47(filter26, 0, mixer6, 0);
+AudioConnection          patchCord48(filter6, 1, peak3, 0);
+AudioConnection          patchCord49(filter8, 1, peak4, 0);
+AudioConnection          patchCord50(filter4, 1, peak2, 0);
+AudioConnection          patchCord51(filter2, 1, peak1, 0);
+AudioConnection          patchCord52(mixer6, 0, vocoderOut, 0);
+AudioConnection          patchCord53(filter37, 1, filter38, 0);
+AudioConnection          patchCord54(filter35, 1, filter36, 0);
+AudioConnection          patchCord55(filter39, 1, filter40, 0);
+AudioConnection          patchCord56(filter33, 1, filter34, 0);
+AudioConnection          patchCord57(filter13, 1, filter14, 0);
+AudioConnection          patchCord58(filter11, 1, filter12, 0);
+AudioConnection          patchCord59(filter15, 1, filter16, 0);
+AudioConnection          patchCord60(filter9, 1, filter10, 0);
+AudioConnection          patchCord61(filter38, 1, mixer7, 2);
+AudioConnection          patchCord62(filter40, 1, mixer7, 3);
+AudioConnection          patchCord63(filter36, 1, mixer7, 1);
+AudioConnection          patchCord64(filter34, 1, mixer7, 0);
+AudioConnection          patchCord65(filter14, 1, peak7, 0);
+AudioConnection          patchCord66(filter16, 1, peak8, 0);
+AudioConnection          patchCord67(filter12, 1, peak6, 0);
+AudioConnection          patchCord68(filter10, 1, peak5, 0);
+AudioConnection          patchCord69(mixer7, 0, vocoderOut, 1);
+AudioConnection          patchCord70(filter41, 1, filter42, 0);
+AudioConnection          patchCord71(filter45, 1, filter46, 0);
+AudioConnection          patchCord72(filter43, 1, filter44, 0);
+AudioConnection          patchCord73(filter47, 1, filter48, 0);
+AudioConnection          patchCord74(filter42, 1, mixer8, 0);
+AudioConnection          patchCord75(filter46, 1, mixer8, 2);
+AudioConnection          patchCord76(filter44, 1, mixer8, 1);
+AudioConnection          patchCord77(filter48, 1, mixer8, 3);
+AudioConnection          patchCord78(filter17, 1, filter18, 0);
+AudioConnection          patchCord79(filter21, 1, filter22, 0);
+AudioConnection          patchCord80(filter19, 1, filter20, 0);
+AudioConnection          patchCord81(filter23, 1, filter24, 0);
+AudioConnection          patchCord82(filter18, 1, peak9, 0);
+AudioConnection          patchCord83(filter22, 1, peak11, 0);
+AudioConnection          patchCord84(filter20, 1, peak10, 0);
+AudioConnection          patchCord85(filter24, 2, peak12, 0);
+AudioConnection          patchCord86(mixer8, 0, vocoderOut, 2);
+AudioConnection          patchCord87(vocoderOut, amp1);
+AudioConnection          patchCord88(amp1, 0, i2s2, 0);
+AudioConnection          patchCord89(amp1, 0, i2s2, 1);
 AudioControlSGTL5000     audioShield;     //xy=96.74602508544922,165.6666660308838
 // GUItool: end automatically generated code
+
 
 // Define the number of voices for polyphony
 const int numVoices = 4;
@@ -179,16 +188,35 @@ bool voiceUsed[numVoices] = {false};
 //Audio Components for synthesis
 MIDI_CREATE_DEFAULT_INSTANCE();
 AudioSynthWaveform   waveform[numVoices];  // Create an array of waveforms for polyphony
-//AudioMixer4          synthMixer;                // Mix the waveforms before output
-AudioOutputI2S       audioOutput;          // Audio output
+AudioEffectEnvelope envelope[numVoices];  // Define envelope for each voice
 AudioConnection      *patchCords[numVoices * 2];  // Patch cords for waveforms to mixer
-//AudioConnection      patchCordToOutput(synthMixer, 0, carrierMix, 1);
 
-// Define envelope for each voice
-AudioEffectEnvelope envelope[numVoices];
+AudioConnection patchWaveforms[numVoices] {
+  AudioConnection(waveform[0], 0, envelope[0], 0),
+  AudioConnection(waveform[1], 0, envelope[1], 0),
+  AudioConnection(waveform[2], 0, envelope[2], 0),
+  AudioConnection(waveform[3], 0, envelope[3], 0),
+};
 
-// New patch cords for the envelope effect
-AudioConnection *patchCordsEnv[numVoices];
+AudioConnection patchEnvelopes[numVoices] {
+  AudioConnection(envelope[0], 0, synthMixer, 0),
+  AudioConnection(envelope[1], 0, synthMixer, 1),
+  AudioConnection(envelope[2], 0, synthMixer, 2),
+  AudioConnection(envelope[3], 0, synthMixer, 3),
+};
+
+// Set up waveforms and mixer
+for (int i = 0; i < numVoices; i++) {
+  waveform[i].begin(WAVEFORM_SINE);
+  waveform[i].amplitude(0);
+}
+ 
+for (int i = 0; i < numVoices; i++) {
+  envelope[i].attack(10); // Attack time in milliseconds
+  envelope[i].decay(100); // Decay time
+  envelope[i].sustain(0.5); // Sustain level
+  envelope[i].release(300); // Release time
+}
 
 const float res = 5;                                            // this is used as resonance value of all state variable filters
 const float attack = 0.99588;                                   // controls attack and decay, must not exceed or equal 1,
@@ -257,9 +285,11 @@ void setup() {
   // allocate memory for the audio library
   AudioMemory(64);  // how memory blocks are really needed?
 
+  Vocoderinit();
+
   //initialize audioshield
   audioShield.enable();      // configure the sgtl5000
-  //audioShield.inputSelect(myInput);
+  audioShield.inputSelect(myInput);
   audioShield.volume(0.5);
   audioShield.adcHighPassFilterDisable();
 
@@ -280,8 +310,6 @@ void setup() {
 //  master.gain(0, 1); //delay bus
 //  master.gain(1, 1); //distortion bus
   amp1.gain(1);
-
-  //Vocoderinit();
 
   AudioProcessorUsageMaxReset();                                // and reset these things
   AudioMemoryUsageMaxReset();                                   // I'm doing this cause the source code did it idk if it's necessary
@@ -418,24 +446,7 @@ void setEnvelope(float peakRaw, float &peakVal, AudioMixer4 mixer, int channel){
 
 //initializes Vocoder filters
 void Vocoderinit(){
-  // Set up waveforms and mixer
-  for (int i = 0; i < numVoices; i++) {
-    //waveform[i].begin(WAVEFORM_SINE);
-    waveform[i].amplitude(0);
-    //I think this line is causing problems it's not supposed to be there
-    //patchCords[i * 2] = new AudioConnection(waveform[i], 0, synthMixer, i);
-  }
 
-  for (int i = 0; i < numVoices; i++) {
-    envelope[i].attack(10); // Attack time in milliseconds
-    envelope[i].decay(100); // Decay time
-    envelope[i].sustain(0.5); // Sustain level
-    envelope[i].release(300); // Release time
-
-    //patchCordsEnv[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
-    patchCords[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
-    patchCords[i+4] = new AudioConnection(envelope[i], 0, synthMixer, i);
-  }
 
   // set the resonance of the filters
   filter1.resonance(res); filter2.resonance(res); filter3.resonance(res); filter4.resonance(res); filter5.resonance(res);
@@ -492,7 +503,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
       float frequency = noteToFrequency(note);
       waveform[i].frequency(frequency);
       waveform[i].amplitude(velocity / 127.0);
-      envelope[i+4].noteOn();
+      envelope[i].noteOn();
       voiceUsed[i] = true;
       voiceNote[i] = note; // Store the note number that this voice is now playing
       break;
@@ -504,7 +515,7 @@ void noteOff(uint8_t note) {
   for (int i = 0; i < numVoices; i++) {
     if (voiceUsed[i] && voiceNote[i] == note) { // Check if this voice is playing the note
       waveform[i].amplitude(0);
-      envelope[i+4].noteOff();
+      envelope[i].noteOff();
       voiceUsed[i] = false;
       voiceNote[i] = -1; // Reset the note number for this voice
       break;
