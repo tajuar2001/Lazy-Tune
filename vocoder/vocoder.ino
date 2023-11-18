@@ -244,7 +244,7 @@ float peak1val, peak2val, peak3val, peak4val, peak5val, peak6val,
 
 const int myInput = AUDIO_INPUT_MIC;
 
-void setEnvelope(float peakRaw, float &peakVal, AudioMixer4 mixer, int channel);
+//void setEnvelope(float peakRaw, float &peakVal, AudioMixer4 mixer, int channel);
 
 void setup() {
   Serial.begin(9600);
@@ -259,13 +259,13 @@ void setup() {
 
   //initialize audioshield
   audioShield.enable();      // configure the sgtl5000
-  audioShield.inputSelect(myInput);
+  //audioShield.inputSelect(myInput);
   audioShield.volume(0.5);
+  audioShield.adcHighPassFilterDisable();
 
   //set initial mixer gains
-  modulatorGain.gain(1); //gain of microphone signal (I2S left input)
-//  carrierMix.gain(0, 0); //gain of carrier signal (I2S right input)
-//  carrierMix.gain(1, 1); //gain of carrier signal (from wave synthesis)
+  modulatorGain.gain(0.5); //gain of microphone signal (I2S left input)
+  setMixer(carrierMix, 0, 0, 0, 0); //channel 1 for synthesized audio, no carrier input yet
 //  sourceMixer.gain(0, 0); //dry audio input (I2S left input)
 //  sourceMixer.gain(1, 0); //autotuned audio input
 //  sourceMixer.gain(2, 1); //vocoder input
@@ -281,7 +281,7 @@ void setup() {
 //  master.gain(1, 1); //distortion bus
   amp1.gain(1);
 
-  Vocoderinit();
+  //Vocoderinit();
 
   AudioProcessorUsageMaxReset();                                // and reset these things
   AudioMemoryUsageMaxReset();                                   // I'm doing this cause the source code did it idk if it's necessary
@@ -303,24 +303,63 @@ void loop() {
 //    playSdWav1.play("SABER.WAV");
 //    delay(10); // wait for library to parse WAV info
 //  }
-    if (usbMIDI.read()) {
-    int note = usbMIDI.getData1();
-    int velocity = usbMIDI.getData2();
-    
-    switch (usbMIDI.getType()) {
-      case midi::NoteOn:
-        if (velocity > 0) {
-          noteOn(note, velocity);
-        } else {
-          noteOff(note);
+        // read midi signal
+    // Channel 0 = Keys, Knobs
+    if(usbMIDI.read(0)) {
+      switch (usbMIDI.getType()) {
+      case midi::NoteOn: // KEY_PRESS
+        {
+        int keyNote = usbMIDI.getData1(); // integer 48 to 72 on the keyboard
+        int keyVelocity = usbMIDI.getData2(); // 0 to 100
+        noteOn(keyNote, keyVelocity);
+        Serial.print("Note = ");
+        Serial.print(keyNote);
+        Serial.print(", Velocity = ");
+        Serial.print(keyVelocity);
+        break;
         }
+      case midi::NoteOff: // KEY_RELEASE
+        {// same as NoteOn
+        int keyNote = usbMIDI.getData1(); // integer 48 to 72 on the keyboard
+        noteOff(keyNote);
+        break;}
+      case midi::ControlChange: // KNOBS
+        {int controlNum = usbMIDI.getData1(); // integer 1 to 8 (the knob number)
+        int controlVal = usbMIDI.getData2(); // integer 0 to 127
+
+        Serial.print("Knob = ");
+        Serial.print(controlNum);
+        Serial.print(", Value = ");
+        Serial.println(controlVal);
+
+        // do something with these values
+        break;}
+      case midi::PitchBend: // PITCH STICK
+        {int pitchValue = usbMIDI.getData1(); // The amount of bend to send (in a signed integer format), between MIDI_PITCHBEND_MIN and MIDI_PITCHBEND_MAX, center value is 0.
+
+        Serial.print("Pitch Bend = ");
+        Serial.print(pitchValue);
         break;
-      case midi::NoteOff:
-        noteOff(note);
-        break;
-      // Handle other MIDI message types as needed
+      }
+      }
     }
-  }
+    // Channel 1 = Pads
+    if(usbMIDI.read(1)) {
+      switch (usbMIDI.getType()) {
+      case midi::NoteOn: // PAD_PRESS
+        {int pad_note = usbMIDI.getData1(); // integer 48 to 55
+        int pad_velocity = usbMIDI.getData2(); // 0 to 100
+        Serial.print("Note = ");
+        Serial.print(pad_note);
+        Serial.print(", Velocity = ");
+        Serial.print(pad_velocity);
+        break;}
+      case midi::NoteOff: // PAD_RELEASE
+        {// same as NoteOn
+        break;}
+      }
+    }
+  
   
   // store peak values at each read
   if(peak1.available()) {peak1raw = peak1.read();}
@@ -370,7 +409,7 @@ void setEnvelope(float peakRaw, float &peakVal, AudioMixer4 mixer, int channel){
     peakVal = peakVal / attack;
     mixer.gain(channel, peakVal);
   }
-  if((peak12raw * threshold) < peak12val) {
+  if((peakRaw * threshold) < peakVal) {
     peakVal = peakVal * attack;
     mixer.gain(channel, peakVal);
   }
@@ -381,7 +420,7 @@ void setEnvelope(float peakRaw, float &peakVal, AudioMixer4 mixer, int channel){
 void Vocoderinit(){
   // Set up waveforms and mixer
   for (int i = 0; i < numVoices; i++) {
-    waveform[i].begin(WAVEFORM_SINE);
+    //waveform[i].begin(WAVEFORM_SINE);
     waveform[i].amplitude(0);
     //I think this line is causing problems it's not supposed to be there
     //patchCords[i * 2] = new AudioConnection(waveform[i], 0, synthMixer, i);
@@ -430,11 +469,11 @@ void Vocoderinit(){
   peak1val = 1; peak2val = 1; peak3val = 1; peak4val = 1; peak5val = 1; peak6val = 1;
   peak7val = 1; peak8val = 1; peak9val = 1; peak10val = 1; peak11val = 1; peak12val = 1;
 
-  setMixer(synthMixer, 0.5, 0.5, 0.5, 0.5);
-  setMixer(vocoderOut, 0.4, 0.4, 0.4, 0);
-  setMixer(mixer6, 1, 1, 1, 1);
-  setMixer(mixer7, 1, 1, 1, 1);
-  setMixer(mixer8, 1, 1, 1, 1);
+  setMixer(synthMixer, 0, 0, 0, 0);
+  setMixer(vocoderOut, 0,0,0, 0);
+  setMixer(mixer6, 0, 0, 0, 0);
+  setMixer(mixer7, 0, 0, 0, 0);
+  setMixer(mixer8, 0, 0, 0, 0);
 
 }
 
@@ -453,6 +492,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
       float frequency = noteToFrequency(note);
       waveform[i].frequency(frequency);
       waveform[i].amplitude(velocity / 127.0);
+      envelope[i+4].noteOn();
       voiceUsed[i] = true;
       voiceNote[i] = note; // Store the note number that this voice is now playing
       break;
@@ -464,6 +504,7 @@ void noteOff(uint8_t note) {
   for (int i = 0; i < numVoices; i++) {
     if (voiceUsed[i] && voiceNote[i] == note) { // Check if this voice is playing the note
       waveform[i].amplitude(0);
+      envelope[i+4].noteOff();
       voiceUsed[i] = false;
       voiceNote[i] = -1; // Reset the note number for this voice
       break;
