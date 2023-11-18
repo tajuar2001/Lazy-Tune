@@ -81,8 +81,8 @@ AudioInputI2S            i2s1;           //xy=85.42857360839844,212.857158660888
 // AudioAnalyzePeak         peak11; //xy=1428.888855404324,524.7618800269233
 // AudioAnalyzePeak         peak10; //xy=1429.9998478359646,466.9841147528755
 // AudioAnalyzePeak         peak9; //xy=1432.2222023010254,408.09521675109863
-// AudioMixer4              sourceMixer;         //xy=1597.3215637207031,256.761869430542
-// AudioMixer4              master;         //xy=1810.0833587646484,913.2381114959717
+ AudioMixer4              sourceMixer;         //xy=1597.3215637207031,256.761869430542
+ AudioMixer4              master;         //xy=1810.0833587646484,913.2381114959717
 // AudioMixer4              delayBus;         //xy=1816.8930740356445,644.2380867004395
 // AudioEffectReverb        reverb1;        //xy=1829.999900817871,254.28570652008057
 // AudioMixer4              distortionBus;         //xy=1828.2264137268066,712.5713996887207
@@ -91,10 +91,10 @@ AudioInputI2S            i2s1;           //xy=85.42857360839844,212.857158660888
 // AudioEffectFreeverb      freeverb1;      //xy=1834.2857704162598,341.42858695983887
 // AudioEffectBitcrusher    bitcrusher1;    //xy=1837.6548080444336,437.42855072021484
 // AudioEffectMultiply      multiplier1;      //xy=1842.2262687683105,567.8570985794067
-// AudioOutputI2S           i2s2;           //xy=1840.988353729248,993.5237693786621
+ AudioOutputI2S           i2s2;           //xy=1840.988353729248,993.5237693786621
 // AudioEffectWaveshaper    waveshape1;     //xy=1844.6548080444336,483.42855072021484
 // AudioEffectWaveshaper    waveshape2;     //xy=1849.6547393798828,527.4285278320312
-// AudioAmplifier           amp1;           //xy=1923.892910003662,912.5237274169922
+ AudioAmplifier           amp1;           //xy=1923.892910003662,912.5237274169922
 // //AudioConnection          patchCord1(waveform1, 0, mixer10, 0);
 // //AudioConnection          patchCord2(waveform2, 0, mixer10, 1);
 // //AudioConnection          patchCord3(waveform3, 0, mixer10, 2);
@@ -190,9 +190,9 @@ AudioInputI2S            i2s1;           //xy=85.42857360839844,212.857158660888
 // AudioConnection          patchCord93(sourceMixer, waveshape2);
 // AudioConnection          patchCord94(sourceMixer, 0, multiplier1, 0);
 // AudioConnection          patchCord95(sourceMixer, freeverb1);
-// AudioConnection          patchCord96(sourceMixer, 0, master, 0);
+ AudioConnection          patchCord96(sourceMixer, 0, master, 0);
 // AudioConnection          patchCord97(sourceMixer, reverb1);
-// AudioConnection          patchCord98(master, amp1);
+ AudioConnection          patchCord98(master, amp1);
 // AudioConnection          patchCord99(delayBus, 0, master, 1);
 // AudioConnection          patchCord100(reverb1, 0, delayBus, 0);
 // AudioConnection          patchCord101(distortionBus, 0, master, 2);
@@ -203,9 +203,9 @@ AudioInputI2S            i2s1;           //xy=85.42857360839844,212.857158660888
 // AudioConnection          patchCord106(multiplier1, 0, distortionBus, 3);
 // AudioConnection          patchCord107(waveshape1, 0, distortionBus, 1);
 // AudioConnection          patchCord108(waveshape2, 0, distortionBus, 2);
-// AudioConnection          patchCord109(amp1, 0, i2s2, 0);
-// AudioConnection          patchCord110(amp1, 0, i2s2, 1);
-// AudioControlSGTL5000     audioShield;     //xy=96.74602508544922,165.6666660308838
+ AudioConnection          patchCord109(amp1, 0, i2s2, 0);
+ AudioConnection          patchCord110(amp1, 0, i2s2, 1);
+ AudioControlSGTL5000     audioShield;     //xy=96.74602508544922,165.6666660308838
 // GUItool: end automatically generated code
 
 //
@@ -378,7 +378,7 @@ void setup() {
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
   audioShield.enable();
-  audioShield.volume(0.5);
+  audioShield.volume(0.7);
 
   // Initialize mixer gains
   Lazyinit();
@@ -399,13 +399,13 @@ void loop() {
     switch (usbMIDI.getType()) {
       case midi::NoteOn:
         if (velocity > 0) {
-          noteOn(note, velocity);
+          //noteOn(note, velocity);
         } else {
-          noteOff(note);
+          //noteOff(note);
         }
         break;
       case midi::NoteOff:
-        noteOff(note);
+        //noteOff(note);
         break;
       // Handle other MIDI message types as needed
     }
@@ -491,93 +491,93 @@ void Lazyinit(){
 }
 
 //initializes Vocoder filters
-void Vocoderinit(){
-  // Set up waveforms and mixer
-  for (int i = 0; i < numVoices; i++) {
-    waveform[i].begin(WAVEFORM_SINE);
-    waveform[i].amplitude(0);
-    //I think this line is causing problems it's not supposed to be there
-    //patchCords[i * 2] = new AudioConnection(waveform[i], 0, synthMixer, i);
-  }
-
-  for (int i = 0; i < numVoices; i++) {
-    envelope[i].attack(10); // Attack time in milliseconds
-    envelope[i].decay(100); // Decay time
-    envelope[i].sustain(0.5); // Sustain level
-    envelope[i].release(300); // Release time
-
-    //patchCordsEnv[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
-    patchCords[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
-    patchCords[i+4] = new AudioConnection(envelope[i], 0, synthMixer, i);
-  }
-
-  // set the resonance of the filters
-  filter1.resonance(res); filter2.resonance(res); filter3.resonance(res); filter4.resonance(res); filter5.resonance(res);
-  filter6.resonance(res); filter7.resonance(res); filter8.resonance(res); filter9.resonance(res); filter10.resonance(res);
-  filter11.resonance(res); filter12.resonance(res); filter13.resonance(res); filter14.resonance(res); filter15.resonance(res);
-  filter16.resonance(res); filter17.resonance(res); filter18.resonance(res); filter19.resonance(res); filter20.resonance(res);
-  filter21.resonance(res); filter22.resonance(res); filter23.resonance(res); filter24.resonance(res); filter25.resonance(res);
-  filter26.resonance(res); filter27.resonance(res); filter28.resonance(res); filter29.resonance(res); filter30.resonance(res);
-  filter31.resonance(res); filter32.resonance(res); filter33.resonance(res); filter34.resonance(res); filter35.resonance(res);
-  filter36.resonance(res); filter37.resonance(res); filter38.resonance(res); filter39.resonance(res); filter40.resonance(res);
-  filter41.resonance(res); filter42.resonance(res); filter43.resonance(res); filter44.resonance(res); filter45.resonance(res);
-  filter46.resonance(res); filter47.resonance(res); filter48.resonance(res);
-
-  // set the frequencies of the filters
-  // pairs of cascaded filters for optimal frequency isolation
-  // two sets of filters are used: for voice signal analysis and instrument/synth filter
-  filter1.frequency(freq[0]); filter2.frequency(freq[0]); filter3.frequency(freq[3]); filter4.frequency(freq[3]);
-  filter5.frequency(freq[6]); filter6.frequency(freq[6]); filter7.frequency(freq[9]); filter8.frequency(freq[9]);
-  filter9.frequency(freq[12]); filter10.frequency(freq[12]); filter11.frequency(freq[15]); filter12.frequency(freq[15]);
-  filter13.frequency(freq[18]); filter14.frequency(freq[18]); filter15.frequency(freq[21]); filter16.frequency(freq[21]);
-  filter17.frequency(freq[24]); filter18.frequency(freq[24]); filter19.frequency(freq[27]); filter20.frequency(freq[27]);
-  filter21.frequency(freq[30]); filter22.frequency(freq[30]); filter23.frequency(freq[33]); filter24.frequency(freq[33]);
-  filter25.frequency(freq[0]); filter26.frequency(freq[0]); filter27.frequency(freq[3]); filter28.frequency(freq[3]);
-  filter29.frequency(freq[6]); filter30.frequency(freq[6]); filter31.frequency(freq[9]); filter32.frequency(freq[9]);
-  filter33.frequency(freq[12]); filter34.frequency(freq[12]); filter35.frequency(freq[15]); filter36.frequency(freq[15]);
-  filter37.frequency(freq[18]); filter38.frequency(freq[18]); filter39.frequency(freq[21]); filter40.frequency(freq[21]);
-  filter41.frequency(freq[24]); filter42.frequency(freq[24]); filter43.frequency(freq[27]); filter44.frequency(freq[27]);
-  filter45.frequency(freq[30]); filter46.frequency(freq[30]); filter47.frequency(freq[33]); filter48.frequency(freq[33]);
-
-  // initialize peak values   
-  peak1val = 1; peak2val = 1; peak3val = 1; peak4val = 1; peak5val = 1; peak6val = 1;
-  peak7val = 1; peak8val = 1; peak9val = 1; peak10val = 1; peak11val = 1; peak12val = 1;
-
-  setMixer(synthMixer, 0.5, 0.5, 0.5, 0.5);
-  setMixer(vocoderOut, 0.4, 0.4, 0.4, 0);
-  setMixer(mixer6, 1, 1, 1, 1);
-  setMixer(mixer7, 1, 1, 1, 1);
-  setMixer(mixer8, 1, 1, 1, 1);
-
-}
-
-void noteOn(uint8_t note, uint8_t velocity) {
-  for (int i = 0; i < numVoices; i++) {
-    if (!voiceUsed[i]) {
-      float frequency = noteToFrequency(note);
-      waveform[i].frequency(frequency);
-      waveform[i].amplitude(velocity / 127.0);
-      voiceUsed[i] = true;
-      voiceNote[i] = note; // Store the note number that this voice is now playing
-      break;
-    }
-  }
-}
-
-void noteOff(uint8_t note) {
-  for (int i = 0; i < numVoices; i++) {
-    if (voiceUsed[i] && voiceNote[i] == note) { // Check if this voice is playing the note
-      waveform[i].amplitude(0);
-      voiceUsed[i] = false;
-      voiceNote[i] = -1; // Reset the note number for this voice
-      break;
-    }
-  }
-}
-
-float noteToFrequency(uint8_t note) {
-  return 440.0 * pow(2.0, (note - 69) / 12.0);
-}
+//void Vocoderinit(){
+//  // Set up waveforms and mixer
+//  for (int i = 0; i < numVoices; i++) {
+//    waveform[i].begin(WAVEFORM_SINE);
+//    waveform[i].amplitude(0);
+//    //I think this line is causing problems it's not supposed to be there
+//    //patchCords[i * 2] = new AudioConnection(waveform[i], 0, synthMixer, i);
+//  }
+//
+//  for (int i = 0; i < numVoices; i++) {
+//    envelope[i].attack(10); // Attack time in milliseconds
+//    envelope[i].decay(100); // Decay time
+//    envelope[i].sustain(0.5); // Sustain level
+//    envelope[i].release(300); // Release time
+//
+//    //patchCordsEnv[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
+//    patchCords[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
+//    patchCords[i+4] = new AudioConnection(envelope[i], 0, synthMixer, i);
+//  }
+//
+//  // set the resonance of the filters
+//  filter1.resonance(res); filter2.resonance(res); filter3.resonance(res); filter4.resonance(res); filter5.resonance(res);
+//  filter6.resonance(res); filter7.resonance(res); filter8.resonance(res); filter9.resonance(res); filter10.resonance(res);
+//  filter11.resonance(res); filter12.resonance(res); filter13.resonance(res); filter14.resonance(res); filter15.resonance(res);
+//  filter16.resonance(res); filter17.resonance(res); filter18.resonance(res); filter19.resonance(res); filter20.resonance(res);
+//  filter21.resonance(res); filter22.resonance(res); filter23.resonance(res); filter24.resonance(res); filter25.resonance(res);
+//  filter26.resonance(res); filter27.resonance(res); filter28.resonance(res); filter29.resonance(res); filter30.resonance(res);
+//  filter31.resonance(res); filter32.resonance(res); filter33.resonance(res); filter34.resonance(res); filter35.resonance(res);
+//  filter36.resonance(res); filter37.resonance(res); filter38.resonance(res); filter39.resonance(res); filter40.resonance(res);
+//  filter41.resonance(res); filter42.resonance(res); filter43.resonance(res); filter44.resonance(res); filter45.resonance(res);
+//  filter46.resonance(res); filter47.resonance(res); filter48.resonance(res);
+//
+//  // set the frequencies of the filters
+//  // pairs of cascaded filters for optimal frequency isolation
+//  // two sets of filters are used: for voice signal analysis and instrument/synth filter
+//  filter1.frequency(freq[0]); filter2.frequency(freq[0]); filter3.frequency(freq[3]); filter4.frequency(freq[3]);
+//  filter5.frequency(freq[6]); filter6.frequency(freq[6]); filter7.frequency(freq[9]); filter8.frequency(freq[9]);
+//  filter9.frequency(freq[12]); filter10.frequency(freq[12]); filter11.frequency(freq[15]); filter12.frequency(freq[15]);
+//  filter13.frequency(freq[18]); filter14.frequency(freq[18]); filter15.frequency(freq[21]); filter16.frequency(freq[21]);
+//  filter17.frequency(freq[24]); filter18.frequency(freq[24]); filter19.frequency(freq[27]); filter20.frequency(freq[27]);
+//  filter21.frequency(freq[30]); filter22.frequency(freq[30]); filter23.frequency(freq[33]); filter24.frequency(freq[33]);
+//  filter25.frequency(freq[0]); filter26.frequency(freq[0]); filter27.frequency(freq[3]); filter28.frequency(freq[3]);
+//  filter29.frequency(freq[6]); filter30.frequency(freq[6]); filter31.frequency(freq[9]); filter32.frequency(freq[9]);
+//  filter33.frequency(freq[12]); filter34.frequency(freq[12]); filter35.frequency(freq[15]); filter36.frequency(freq[15]);
+//  filter37.frequency(freq[18]); filter38.frequency(freq[18]); filter39.frequency(freq[21]); filter40.frequency(freq[21]);
+//  filter41.frequency(freq[24]); filter42.frequency(freq[24]); filter43.frequency(freq[27]); filter44.frequency(freq[27]);
+//  filter45.frequency(freq[30]); filter46.frequency(freq[30]); filter47.frequency(freq[33]); filter48.frequency(freq[33]);
+//
+//  // initialize peak values   
+//  peak1val = 1; peak2val = 1; peak3val = 1; peak4val = 1; peak5val = 1; peak6val = 1;
+//  peak7val = 1; peak8val = 1; peak9val = 1; peak10val = 1; peak11val = 1; peak12val = 1;
+//
+//  setMixer(synthMixer, 0.5, 0.5, 0.5, 0.5);
+//  setMixer(vocoderOut, 0.4, 0.4, 0.4, 0);
+//  setMixer(mixer6, 1, 1, 1, 1);
+//  setMixer(mixer7, 1, 1, 1, 1);
+//  setMixer(mixer8, 1, 1, 1, 1);
+//
+//}
+//
+//void noteOn(uint8_t note, uint8_t velocity) {
+//  for (int i = 0; i < numVoices; i++) {
+//    if (!voiceUsed[i]) {
+//      float frequency = noteToFrequency(note);
+//      waveform[i].frequency(frequency);
+//      waveform[i].amplitude(velocity / 127.0);
+//      voiceUsed[i] = true;
+//      voiceNote[i] = note; // Store the note number that this voice is now playing
+//      break;
+//    }
+//  }
+//}
+//
+//void noteOff(uint8_t note) {
+//  for (int i = 0; i < numVoices; i++) {
+//    if (voiceUsed[i] && voiceNote[i] == note) { // Check if this voice is playing the note
+//      waveform[i].amplitude(0);
+//      voiceUsed[i] = false;
+//      voiceNote[i] = -1; // Reset the note number for this voice
+//      break;
+//    }
+//  }
+//}
+//
+//float noteToFrequency(uint8_t note) {
+//  return 440.0 * pow(2.0, (note - 69) / 12.0);
+//}
 
 
 
