@@ -32,7 +32,7 @@ void setup() {
   AudioMemory(12);
 
   sgtl5000_1.enable();
-  sgtl5000_1.volume(1);
+  sgtl5000_1.volume(0.7);
 
   // Initialize mixer gains
   initializeMixerGains();
