@@ -1,220 +1,123 @@
+#pragma GCC diagnostic ignored "-Wcpp"
+#include <SerialFlash.h>
 #include <Audio.h>
-#include "effect_granular.h" // Include the granular effect header
+#include <Wire.h>
+#include <SPI.h>
+#include <SD.h>
 
+#include <MIDI.h>
+// MIDI Library Initialization for USB
+MIDI_CREATE_DEFAULT_INSTANCE();
+//----------------------------------------------------------
+#include "autotune.h"
 
-class AudioEffectGranular : public AudioStream {
-public:
-    AudioEffectGranular() : AudioStream(1, inputQueueArray) { }
-    virtual void update(void);
+#define AUDIO_GUITARTUNER_BLOCKS  16 // redefinition of notefreq parameter to reduce latency
 
-private:
-    void processFreeze(audio_block_t *block); // Implementation placeholder
-    void processPitchShift(audio_block_t *block); // Implementation placeholder
+CustomAutoTune autotuner;
+// Audio Components
+AudioInputI2S i2s1;                        // IS2 input
+AudioOutputI2S i2s2;                       // IS2 output
+AudioControlSGTL5000 audioShield;          // Audio shield
+AudioAnalyzeNoteFrequency notefreq;        // frequency detector
+AudioFilterBiquad        filter1;          // filter (biquad, easy lowpass filter)    
 
-    audio_block_t *inputQueueArray[1];
-    int16_t *sample_bank;
-    uint32_t playpack_rate;
-    uint32_t accumulator;
-    int16_t max_sample_len;
-    int16_t write_head;
-    int16_t read_head;
-    int16_t grain_mode;
-    int16_t freeze_len;
-    int16_t prev_input;
-    int16_t glitch_len;
-    bool allow_len_change;
-    bool sample_loaded;
-    bool write_en;
-    bool sample_req;
+AudioConnection patchCords[5] {
+  AudioConnection(i2s1, 0, filter1, 0),
+  AudioConnection(filter1, 0, notefreq, 0),
+
+  AudioConnection(filter1, 0, autotuner, 0),
+  AudioConnection(autotuner, 0, i2s2, 0),
+  AudioConnection(autotuner, 0, i2s2, 1),
 };
 
-
-// Define the number of samples in your granular sample bank
-const int16_t GRANULAR_MEMORY_SIZE = 2048;
-int16_t granularMemory[GRANULAR_MEMORY_SIZE];
-
-// Instantiate the audio classes
-AudioInputI2S i2s1;                // Input from I2S
-AudioEffectGranular granular1;     // The granular effect
-AudioOutputI2S i2s2;               // Output to I2S
-AudioControlSGTL5000 sgtl5000_1;   // Control chip for I2S
-
-// Create the audio connections
-AudioConnection patchCord1(i2s1, 0, granular1, 0);
-AudioConnection patchCord2(granular1, 0, i2s2, 0);
-AudioConnection patchCord3(granular1, 0, i2s2, 1);
+// Function declarations
+void processAudio(); // Function to process and autotune audio
+void readAndExecuteCommands(); // Function to read serial commands and execute them
 
 void setup() {
-  // Initialize serial communication for debugging purposes
-  Serial.begin(9600);
+    Serial.begin(115200); // Start serial communication at a higher baud rate
+    MIDI.begin(MIDI_CHANNEL_OMNI);
+    AudioMemory(31); // Allocate memory for audio processing
 
-  // Initialize the audio shield
-  AudioMemory(20); // Allocate memory for audio processing
-  sgtl5000_1.enable();
-  sgtl5000_1.volume(0.5); // Set the initial volume (adjust as necessary)
+    audioShield.enable(); // audioShield initialization
+    audioShield.volume(0.5);
 
-  // Initialize the granular effect
-  granular1.begin(granularMemory, GRANULAR_MEMORY_SIZE);
+    // filter setup
+    filter1.setLowpass(0, 3400, 0.707); // Butterworth filter, 12 db/octave
+    notefreq.begin(.15); // Initialize Yin Algorithm Absolute Threshold (15% is a good number)
 
-  // Here you can initialize the granular effect with a specific mode if desired
-  // granular1.beginFreeze(); // For a freeze effect
-  // granular1.beginPitchShift(); // For a pitch shift effect
+    // autotune setup
+    autotuner.option_edit(autotuneMethod::original); // AutoTune initialization
+    autotuner.currFrequency = 20;
+    autotuner.manualPitchOffset = 0;
 }
-
 
 void loop() {
-  // Placeholder for user input or condition to trigger granular effect changes.
-  // You should replace this with actual logic or user input handling.
-  
-  if (Serial.available() > 0) {
-    int command = Serial.read();
+    readAndExecuteCommands(); // Check for and execute serial commands
     
-    // Commands to control the granular effect
-    switch (command) {
-      case 'f': // Command to begin freeze effect
-        granular1.beginFreeze_int(150); // Replace 150 with the desired grain size
+    // read current fundamental frequency into AutoTune
+    if(notefreq.available()) {
+      float note = notefreq.read();
+      float prob = notefreq.probability();
+      // Serial.printf("Note: %3.2f | Probably %.2f\n", note, prob);
+      if(prob > 0.9) {
+        autotuner.currFrequency = note;
+      }
+    }
+
+    // read midi signal 
+    if(usbMIDI.read(0)) { // Channel 0
+      switch (usbMIDI.getType()) {
+      case midi::PitchBend: { // PITCH STICK
+        int pitchValue = usbMIDI.getData1(); // The amount of bend to send (in a signed integer format), between MIDI_PITCHBEND_MIN and MIDI_PITCHBEND_MAX, center value is 0.
+        autotuner.manualPitchOffset = AUTOTUNE_MIN_PS + ((pitchValue - MIDI_PITCHBEND_MIN) / static_cast<float>(MIDI_PITCHBEND_MAX - MIDI_PITCHBEND_MIN)) * (AUTOTUNE_MAX_PS - AUTOTUNE_MIN_PS);
         break;
-      case 'p': // Command to begin pitch shift
-        granular1.beginPitchShift_int(150); // Replace 150 with the desired grain size
-        break;
-      case 's': // Command to stop the granular effect
-        granular1.stop();
-        break;
-      // Add more cases as needed for other functionalities
+      }
+      // case midi::ControlChange:
+      //   int controlNum = usbMIDI.getData1();
+      //   int controlVal = usbMIDI.getData2();
+
+      //   Serial.print("Knob = ");
+      //   Serial.print(controlNum);
+      //   Serial.print(", Value = ");
+      //   Serial.println(controlVal);
+
+      //   if(controlNum == AUTOTUNE_MIDI_KNOB) {
+      //     // controlVal goes from 0 to 127, map it to -0.4 to 0.9
+      //     autotuner.manualPitchOffset = -0.4 + (controlVal / static_cast<float>(127)) * (0.9-(-0.4));
+      //   }
+      //   break;
     }
-  }
-  
-  // Other continuous audio processing can go here if needed
+    }
+    //Serial.println(AudioMemoryUsageMax());
 }
 
-void AudioEffectGranular::update(void) {
-  audio_block_t *block;
-
-  // Check if the sample bank is properly initialized
-  if (sample_bank == NULL) {
-    block = receiveReadOnly(0);
-    if (block) release(block);
-    return;
-  }
-
-  // Get the next audio block to process
-  block = receiveWritable(0);
-  if (!block) return;
-
-  // The granular effect processing is done here
-  if (grain_mode == 0) {
-    // Passthrough, no granular effect
-    prev_input = block->data[AUDIO_BLOCK_SAMPLES-1];
-  } else if (grain_mode == 1) {
-    // Freeze effect processing code
-    processFreeze(block);
-  } else if (grain_mode == 2) {
-    // Pitch shift effect processing code
-    processPitchShift(block);
-  }
-
-  // Transmit the processed block and release memory
-  transmit(block);
-  release(block);
+// Function to read serial commands and execute them
+void readAndExecuteCommands() {
+    if (Serial.available()) {
+        String command = Serial.readStringUntil('\n');
+        executeCommand(command);
+    }
 }
 
-
-void AudioEffectGranular::processFreeze(audio_block_t *block) {
-  for (int j = 0; j < AUDIO_BLOCK_SAMPLES; j++) {
-    if (sample_req) {
-      // only begin capture on zero cross
-      int16_t current_input = block->data[j];
-      if ((current_input < 0 && prev_input >= 0) ||
-          (current_input >= 0 && prev_input < 0)) {
-        write_en = true;
-        write_head = 0;
-        read_head = 0;
-        sample_req = false;
-      } else {
-        prev_input = current_input;
-      }
+// Execute a received command
+void executeCommand(const String& command) {
+    if (command.startsWith("AT_")) {
+        // Parse the command to get the autotune parameters
+        // Example command might be "autotune:on" or "autotune:off"
+        String parameter = command.substring(3);
+      
+        if (parameter == "ON") {
+            // Turn on autotune
+            Serial.println("Autotune Enabled");
+            autotuner.option_edit(autotuneMethod::original);
+        } else if (parameter == "OFF") {
+            // Turn off autotune
+            Serial.println("Autotune Disabled");
+            autotuner.option_edit(autotuneMethod::none);
+        }
+        // Add other parameters as needed
+    } else {
+        Serial.println("Unknown command");
     }
-    if (write_en) {
-      sample_bank[write_head++] = block->data[j];
-      if (write_head >= freeze_len) {
-        sample_loaded = true;
-      }
-      if (write_head >= max_sample_len) {
-        write_en = false;
-      }
-    }
-    if (sample_loaded) {
-      if (playpack_rate >= 0) {
-        accumulator += playpack_rate;
-        read_head = accumulator >> 16;
-      }
-      if (read_head >= freeze_len) {
-        accumulator = 0;
-        read_head = 0;
-      }
-      block->data[j] = sample_bank[read_head];
-    }
-  }
 }
-
-void AudioEffectGranular::processPitchShift(audio_block_t *block) {
-  for (int k = 0; k < AUDIO_BLOCK_SAMPLES; k++) {
-    if (sample_req) {
-      int16_t current_input = block->data[k];
-      if ((current_input < 0 && prev_input >= 0) ||
-          (current_input >= 0 && prev_input < 0)) {
-        write_en = true;
-      } else {
-        prev_input = current_input;
-      }
-    }
-
-    if (write_en) {
-      sample_req = false;
-      if (write_head >= glitch_len) {
-        write_head = 0;
-        sample_loaded = true;
-        write_en = false;
-        allow_len_change = false;
-      }
-      sample_bank[write_head] = block->data[k];
-      write_head++;
-    }
-
-    if (sample_loaded) {
-      float fade_len = 20.00;
-      int16_t m2 = fade_len;
-
-      for (int m = 0; m < 2; m++) {
-        sample_bank[m + glitch_len] = 0;
-      }
-
-      for (int m = 2; m < glitch_len - m2; m++) {
-        sample_bank[m + glitch_len] = sample_bank[m];
-      }
-
-      for (int m = glitch_len - m2; m < glitch_len; m++) {
-        float fadet = sample_bank[m] * (m2 / fade_len);
-        sample_bank[m + glitch_len] = (int16_t)fadet;
-        m2--;
-      }
-      sample_loaded = false;
-      prev_input = block->data[k];
-      sample_req = true;
-    }
-
-    accumulator += playpack_rate;
-    read_head = (accumulator >> 16);
-
-    if (read_head >= glitch_len) {
-      read_head -= glitch_len;
-      accumulator = 0;
-
-      for (int m = 0; m < glitch_len; m++) {
-        sample_bank[m + (glitch_len * 2)] = sample_bank[m + glitch_len];
-      }
-    }
-    block->data[k] = sample_bank[read_head + (glitch_len * 2)];
-  }
-}
-

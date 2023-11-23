@@ -6,8 +6,22 @@
 
 #include <MIDI.h>
 
-// GUItool: begin automatically generated code
-AudioInputI2S            finalInputAudio;           //xy=140,143
+MIDI_CREATE_DEFAULT_INSTANCE();
+#define AUDIO_GUITARTUNER_BLOCKS  16 // redefinition of notefreq parameter to reduce latency
+
+AudioInputI2S            inputAudio;           //xy=140,143
+// -------------------------------------------------------
+// Vocoder
+// TODO: add in the rest of the vocoder system
+AudioMixer4              synthMixer;
+AudioMixer4              carrierMixer;
+
+// -------------------------------------------------------
+// autotune
+AudioAnalyzeNoteFrequency notefreq;        // frequency detector
+AudioFilterBiquad        filter1;          // filter (biquad, easy lowpass filter)    
+CustomAutoTune autotuner;
+// -------------------------------------------------------
 AudioMixer4              sourceMixer;         //xy=760,144
 
 AudioEffectReverb        reverb1;        //xy=1049,122
@@ -22,68 +36,65 @@ AudioEffectWaveshaper    limiter;     //xy=1044,404
 AudioEffectMultiply      multiply1;      //xy=1036,456
 AudioMixer4              distortionBus;         //xy=1065,641
 
-AudioMixer4              synthMixer1;
-AudioMixer4              synthMixer2;
-AudioMixer4              synthMixer3;
-AudioMixer4              synthMixer4;
-AudioMixer4              synthMixer5;
-AudioMixer4              synthMixer6;
-AudioMixer4              synthMixer7;  
-
-AudioMixer4              synthCombineMixer1;
-AudioMixer4              synthCombineMixer2;
-AudioMixer4              synthMixer;
-
 AudioMixer4              masterMixer;         //xy=904,766
 AudioAmplifier           outputVolumeControl;           //xy=928,829
 AudioOutputI2S           finalOutputAudio;           //xy=1158,836
 
-AudioConnection patchCords[33] = {
-  AudioConnection(finalInputAudio, 0, sourceMixer, 0),
+AudioControlSGTL5000 sgtl5000_1;
 
-  AudioConnection(sourceMixer, 0, masterMixer, 0),
+AudioConnection patchCords[33] = {
+  
+  // Vocoder lower half + synthesizer
+  AudioConnection(inputAudio, 1, carrierMixer, 0),
+  AudioConnection(synthMixer, 0, carrierMixer, 1),
+  // TODO rest of lower half of vocoder
+  AudioConnection(carrierMixer, 0, sourceMixer, 3),
+  AudioConnection(carrierMixer, 0, multiply1, 1),
+
+  // sourceMixer
+  AudioConnection(inputAudio, 0, sourceMixer, 0),
+  // delayBus Input
   AudioConnection(sourceMixer, reverb1),
   AudioConnection(sourceMixer, flange1),
   AudioConnection(sourceMixer, freeverb1),
   AudioConnection(sourceMixer, chorus1),
-
+  // distortionBus Input
   AudioConnection(sourceMixer, bitcrusher1),
   AudioConnection(sourceMixer, distortion),
   AudioConnection(sourceMixer, limiter),
   AudioConnection(sourceMixer, 0, multiply1, 0),
+  AudioConnection(sourceMixer, 0, masterMixer, 0),
 
-  AudioConnection(delayBus, 0, masterMixer, 1),
+  // delayBus
   AudioConnection(reverb1, 0, delayBus, 0),
   AudioConnection(flange1, 0, delayBus, 1),
   AudioConnection(freeverb1, 0, delayBus, 2),
   AudioConnection(chorus1, 0, delayBus, 3),
-
-  AudioConnection(distortionBus, 0, masterMixer, 2),
+  AudioConnection(delayBus, 0, masterMixer, 1),
+  // distortionBus
   AudioConnection(bitcrusher1, 0, distortionBus, 0),
   AudioConnection(distortion, 0, distortionBus, 1),
   AudioConnection(limiter, 0, distortionBus, 2),
   AudioConnection(multiply1, 0, distortionBus, 3),
+  AudioConnection(distortionBus, 0, masterMixer, 2),
 
-  AudioConnection(synthMixer1, 0, synthCombineMixer1, 0),
-  AudioConnection(synthMixer2, 0, synthCombineMixer1, 1),
-  AudioConnection(synthMixer3, 0, synthCombineMixer1, 2),
-  AudioConnection(synthMixer4, 0, synthCombineMixer1, 3),
-  AudioConnection(synthMixer5, 0, synthCombineMixer2, 0),
-  AudioConnection(synthMixer6, 0, synthCombineMixer2, 1),
-  AudioConnection(synthMixer7, 0, synthCombineMixer2, 2),
-  AudioConnection(synthCombineMixer1, 0, synthMixer, 0),
-  AudioConnection(synthCombineMixer2, 0, synthMixer, 1),
-  AudioConnection(synthMixer, 0, sourceMixer, 3),
-  AudioConnection(synthMixer, 0, multiply1, 1),
-
+  // Output
   AudioConnection(masterMixer, outputVolumeControl),
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 0),
 };
 
+// Define the number of voices for polyphony
+const int numVoices = 4;
+int voiceNote[numVoices] = {-1};  // keep track of the note information
+bool voiceUsed[numVoices] = {false}; // keep track of usage
+unsigned long voiceStartTime[numVoices] = {0}; // keep track of timing
+//Audio Components for synthesis
+AudioSynthWaveform   waveform[numVoices];  // Create an array of waveforms for polyphony
+AudioEffectEnvelope envelope[numVoices];  // Define envelope for each voice
+AudioConnection *patchCordsWav[numVoices]; // Patchcords for WaveForms
+AudioConnection *patchCordsEnv[numVoices]; // Patchcords for Envelopes
 
-// GUItool: end automatically generated code
-
-AudioControlSGTL5000 sgtl5000_1;
+// Setup Variables
 
 // Buffers for flanger and chorus effects
 static const int FLANGE_BUFFER_SIZE = 512;
@@ -114,22 +125,6 @@ float distortion1[WAVESHAPE_SIZE] = {-1, -0.9999,-0.9996,-0.99911,-0.99841,-0.99
                     0.95062,0.95512,0.95938,0.96342,0.96724,0.97083,0.97421,0.97737,0.98032,0.98305,0.98558,
                     0.9879,0.99001,0.99192,0.99362,0.99512,0.99642,0.99751,0.99841,0.99911,0.9996,0.9999,1};
 
-// Define the number of voices for polyphony
-const int numVoices = 28;
-int voiceNote[numVoices] = {-1}; 
-
-// Array to keep track of voice usage
-bool voiceUsed[numVoices] = {false};
-
-unsigned long voiceStartTime[numVoices] = {0};
-
-//Audio Components for synthesis
-MIDI_CREATE_DEFAULT_INSTANCE();
-AudioSynthWaveform   waveform[numVoices];  // Create an array of waveforms for polyphony
-AudioEffectEnvelope envelope[numVoices];  // Define envelope for each voice
-
-AudioConnection *patchCordsWav[numVoices]; // Patchcords for WaveForms
-AudioConnection *patchCordsEnv[numVoices]; // Patchcords for Envelopes
 
 // Setup routine
 void setup() {
@@ -143,9 +138,11 @@ void setup() {
   
   // enable Mixer Gain
   setMixer(sourceMixer, 1, 0, 0, 1);  
-  setMixer(masterMixer, 1, 0, 0, 0);
+  setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7);  
+  setMixer(carrierMixer, 0, 1, 0, 0);  
   setMixer(delayBus, 0, 0, 0, 0);
   setMixer(distortionBus, 0, 0, 0, 0);
+  setMixer(masterMixer, 1, 0, 0, 0);
   outputVolumeControl.gain(1);
 
   // initialize effects
@@ -166,39 +163,9 @@ void setup() {
     envelope[i].sustain(0.5); // Sustain level
     envelope[i].release(300); // Release time
     
-    patchCordsEnv[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
+    patchCordsWav[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
+    patchCordsEnv[i] = new AudioConnection(envelope[i], 0, synthMixer, i);
   }
-  for (int i = 0; i < numVoices/7; ++i) {
-    patchCordsWav[i] = new AudioConnection(envelope[i], 0, synthMixer1, i);
-  }
-  for (int i = numVoices/7; i < 2*numVoices/7; ++i) {
-    patchCordsWav[i] = new AudioConnection(envelope[i], 0, synthMixer2, i);
-  }
-  for (int i = 2*numVoices/7; i < 3*numVoices/7; ++i) {
-    patchCordsWav[i] = new AudioConnection(envelope[i], 0, synthMixer3, i);
-  }
-  for (int i = 3*numVoices/7; i < 4*numVoices/7; ++i) {
-    patchCordsWav[i] = new AudioConnection(envelope[i], 0, synthMixer4, i);
-  }
-  for (int i = 4*numVoices/7; i < 5*numVoices/7; ++i) {
-    patchCordsWav[i] = new AudioConnection(envelope[i], 0, synthMixer5, i);
-  }
-  for (int i = 5*numVoices/7; i < 6*numVoices/7; ++i) {
-    patchCordsWav[i] = new AudioConnection(envelope[i], 0, synthMixer6, i);
-  }
-  for (int i = 6*numVoices/7; i < numVoices; ++i) {
-    patchCordsWav[i] = new AudioConnection(envelope[i], 0, synthMixer7, i);
-  }
-  setMixer(synthMixer1, 0.4, 0.4, 0.4, 0.4);
-  setMixer(synthMixer2, 0.4, 0.4, 0.4, 0.4);
-  setMixer(synthMixer3, 0.4, 0.4, 0.4, 0.4);
-  setMixer(synthMixer4, 0.4, 0.4, 0.4, 0.4);
-  setMixer(synthMixer5, 0.4, 0.4, 0.4, 0.4);
-  setMixer(synthMixer6, 0.4, 0.4, 0.4, 0.4);
-  setMixer(synthMixer7, 0.4, 0.4, 0.4, 0.4);
-  setMixer(synthCombineMixer1, 0.4, 0.4, 0.4, 0.4);
-  setMixer(synthCombineMixer2, 0.4, 0.4, 0.4, 0);
-  setMixer(synthMixer, 0.4, 0.4, 0, 0);
 
 }
 
@@ -206,7 +173,64 @@ void setup() {
 void loop() {
   // Read commands from Serial
   readAndApplySerialCommands();
+  // Read control from MIDI Signal
+  readAndApplyMIDIControl();
 
+  Serial.println(AudioMemoryUsageMax());
+}
+
+// Read and apply serial commands
+void readAndApplySerialCommands() {
+  if (Serial.available() > 0) {
+    // Read the incoming command
+    char commandBuffer[10];
+    readSerialCommand(commandBuffer, sizeof(commandBuffer));
+
+    // Parse and apply the command
+    applySerialCommand(commandBuffer);
+  }
+}
+// Read serial command into buffer
+void readSerialCommand(char *buffer, size_t bufferSize) {
+  size_t index = 0;
+  while (index < bufferSize - 1 && Serial.available()) {
+    char c = Serial.read();
+    if (c == '\n') break;
+    buffer[index++] = c;
+  }
+  buffer[index] = '\0'; // Null-terminate the string
+}
+// Parse and apply the command
+void applySerialCommand(const char *command) {
+  switch (command[0]) {
+    case 'm': setMixerGain(sourceMixer, 0, command + 1); break; //dry microphone gain
+    case 'c': setMixerGain(sourceMixer, 3, command + 1); break; //dry carrier signal gain
+    case 'a': setMixerGain(sourceMixer, 1, command + 1); break; //autotune gain
+    case 'v': setMixerGain(sourceMixer, 2, command + 1); break; //vocoder gain
+
+    case 'r': setMixerGain(delayBus, 0, command + 1); break; // reverb gain
+    case 'f': setMixerGain(delayBus, 1, command + 1); break; // flanger gain
+    case 'e': setMixerGain(delayBus, 2, command + 1); break; // freeverb gain
+    case 'h': setMixerGain(delayBus, 3, command + 1); break; // chorus gain
+
+    case 'b': setMixerGain(distortionBus, 0, command + 1); break; // bitcrusher gain
+    case 't': setMixerGain(distortionBus, 1, command + 1); break; // distortion gain
+    case 'l': setMixerGain(distortionBus, 2, command + 1); break; // limiter gain
+    case 'u': setMixerGain(distortionBus, 3, command + 1); break; // multiplier gain
+
+    case 's': setMixerGain(masterMixer, 0, command + 1); break; //dry source master gain
+    case 'd': setMixerGain(masterMixer, 1, command + 1); break; //delay bus master gain
+    case 'i': setMixerGain(masterMixer, 2, command + 1); break; //distortion bus master gain
+
+    case 'o': outputVolumeControl.gain(atof(command + 1)); break; //master volume output
+
+    case 'R': freeverb1.roomsize(atof(command + 1)); break; // attempt to change roomsize
+    default: Serial.println("Invalid effect type"); break;
+  }
+}
+
+// Read and apply MIDI control input
+void readAndApplyMIDIControl() {
   // read MIDI signal
     // Channel 0 = Keys, Knobs
     if(usbMIDI.read(0)) {
@@ -270,60 +294,6 @@ void loop() {
         break;}
       }
     } // end MIDI
-
-  Serial.println(AudioMemoryUsageMax());
-}
-
-// Read and apply serial commands
-void readAndApplySerialCommands() {
-  if (Serial.available() > 0) {
-    // Read the incoming command
-    char commandBuffer[10];
-    readSerialCommand(commandBuffer, sizeof(commandBuffer));
-
-    // Parse and apply the command
-    applySerialCommand(commandBuffer);
-  }
-}
-
-// Read serial command into buffer
-void readSerialCommand(char *buffer, size_t bufferSize) {
-  size_t index = 0;
-  while (index < bufferSize - 1 && Serial.available()) {
-    char c = Serial.read();
-    if (c == '\n') break;
-    buffer[index++] = c;
-  }
-  buffer[index] = '\0'; // Null-terminate the string
-}
-
-// Parse and apply the command
-void applySerialCommand(const char *command) {
-  switch (command[0]) {
-    case 'm': setMixerGain(sourceMixer, 0, command + 1); break; //dry microphone gain
-    case 'c': setMixerGain(sourceMixer, 3, command + 1); break; //dry carrier signal gain
-    case 'a': setMixerGain(sourceMixer, 1, command + 1); break; //autotune gain
-    case 'v': setMixerGain(sourceMixer, 2, command + 1); break; //vocoder gain
-
-    case 'r': setMixerGain(delayBus, 0, command + 1); break; // reverb gain
-    case 'f': setMixerGain(delayBus, 1, command + 1); break; // flanger gain
-    case 'e': setMixerGain(delayBus, 2, command + 1); break; // freeverb gain
-    case 'h': setMixerGain(delayBus, 3, command + 1); break; // chorus gain
-
-    case 'b': setMixerGain(distortionBus, 0, command + 1); break; // bitcrusher gain
-    case 't': setMixerGain(distortionBus, 1, command + 1); break; // distortion gain
-    case 'l': setMixerGain(distortionBus, 2, command + 1); break; // limiter gain
-    case 'u': setMixerGain(distortionBus, 3, command + 1); break; // multiplier gain
-
-    case 's': setMixerGain(masterMixer, 0, command + 1); break; //dry source master gain
-    case 'd': setMixerGain(masterMixer, 1, command + 1); break; //delay bus master gain
-    case 'i': setMixerGain(masterMixer, 2, command + 1); break; //distortion bus master gain
-
-    case 'o': outputVolumeControl.gain(atof(command + 1)); break; //master volume output
-
-    case 'R': freeverb1.roomsize(atof(command + 1)); break; // attempt to change roomsize
-    default: Serial.println("Invalid effect type"); break;
-  }
 }
 
 // Set mixer gain
@@ -352,7 +322,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
   int oldestVoice = 0;
 
   for (int i = 0; i < numVoices; i++) {
-    if (!voiceUsed[i]) {
+    if (voiceNote[i] == note || !voiceUsed[i]) { // TODO: test if this prevents playing a duplicate note, which I think is the cause
       freeVoice = i;
       break;
     } else if(voiceStartTime[i] < oldestTime) {
