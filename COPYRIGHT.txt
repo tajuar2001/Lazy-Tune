@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 11/18/2023 Tajuar Bhuiyan, Christopher Brown, Seiya Kozakai
+Copyright (c) 10/01/2023 Tajuar Bhuiyan, Christopher Brown, Seiya Kozakai
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -3,7 +3,6 @@
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
-
 #include <MIDI.h>
 #include "autotune.h"
 
@@ -54,17 +53,20 @@ AudioConnection patchCords[31] = {
   // Vocoder lower half + synthesizer
   AudioConnection(inputAudio, 1, carrierMixer, 0),
   AudioConnection(synthMixer, 0, carrierMixer, 1),
+
   // TODO rest of lower half of vocoder
   AudioConnection(carrierMixer, 0, sourceMixer, 3),
   AudioConnection(carrierMixer, 0, multiply1, 1),
 
   // sourceMixer
   AudioConnection(inputAudio, 0, sourceMixer, 0),
+
   // delayBus Input
   AudioConnection(sourceMixer, reverb1),
   AudioConnection(sourceMixer, flange1),
   AudioConnection(sourceMixer, freeverb1),
   AudioConnection(sourceMixer, chorus1),
+
   // distortionBus Input
   AudioConnection(sourceMixer, bitcrusher1),
   AudioConnection(sourceMixer, distortion),
@@ -78,6 +80,7 @@ AudioConnection patchCords[31] = {
   AudioConnection(freeverb1, 0, delayBus, 2),
   AudioConnection(chorus1, 0, delayBus, 3),
   AudioConnection(delayBus, 0, masterMixer, 1),
+
   // distortionBus
   AudioConnection(bitcrusher1, 0, distortionBus, 0),
   AudioConnection(distortion, 0, distortionBus, 1),
@@ -91,18 +94,19 @@ AudioConnection patchCords[31] = {
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 1),
 };
 
+
 // Define the number of voices for polyphony
 const int numVoices = 4;
 int voiceNote[numVoices] = {-1};  // keep track of the note information
 bool voiceUsed[numVoices] = {false}; // keep track of usage
 unsigned long voiceStartTime[numVoices] = {0}; // keep track of timing
+
 //Audio Components for synthesis
 AudioSynthWaveform   waveform[numVoices];  // Create an array of waveforms for polyphony
 AudioEffectEnvelope envelope[numVoices];  // Define envelope for each voice
 AudioConnection *patchCordsWav[numVoices]; // Patchcords for WaveForms
 AudioConnection *patchCordsEnv[numVoices]; // Patchcords for Envelopes
 
-// Setup Variables
 
 // Buffers for flanger and chorus effects
 static const int FLANGE_BUFFER_SIZE = 512;
@@ -306,6 +310,66 @@ void readAndApplyMIDIControl() {
       }
     } // end MIDI
 }
+
+
+/*
+Alternative Version of the MIDI CONTROL 
+
+
+// Constants for MIDI notes and controls
+const int MIDI_NOTE_MIN = 48;
+const int MIDI_NOTE_MAX = 72;
+const int MIDI_CONTROL_MIN = 1;
+const int MIDI_CONTROL_MAX = 8;
+
+// Handle Note On/Off events
+void handleNoteEvent(int note, int velocity, bool isNoteOn) {
+  if(isNoteOn && velocity > 0) {
+    noteOn(note, velocity);
+  } else {
+    noteOff(note);
+  }
+}
+
+// Handle Control Change event
+void handleControlChangeEvent(int controlNum, int controlVal) {
+  Serial.print(controlNum);
+  Serial.println(controlVal);
+  // Additional control change handling
+}
+
+// Read and apply MIDI control input
+void readAndApplyMIDIControl() {
+  // Channel 0: Keys, Knobs
+  if(usbMIDI.read(0)) {
+    int arg1 = usbMIDI.getData1();
+    switch (usbMIDI.getType()) {
+      case midi::NoteOn:
+      case midi::NoteOff:
+        handleNoteEvent(arg1, usbMIDI.getData2(), usbMIDI.getType() == midi::NoteOn);
+        break;
+      case midi::ControlChange:
+        handleControlChangeEvent(arg1, usbMIDI.getData2());
+        break;
+      case midi::PitchBend:
+        // Pitch bend handling
+        break;
+    }
+  }
+
+  // Channel 1: Pads
+  if(usbMIDI.read(1)) {
+    if (usbMIDI.getType() == midi::NoteOn) {
+      Serial.print(usbMIDI.getData1());
+      Serial.print(usbMIDI.getData2());
+    }
+    // NoteOff for pads can be handled if needed
+  }
+}
+
+
+
+*/
 
 // autotune code in main loop
 void autotuneLoop() {
