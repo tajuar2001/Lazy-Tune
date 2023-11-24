@@ -1,6 +1,6 @@
 # LazyTune
 
-![Overall System](/src/etc/System.png)
+![Overall System](/src/etc/diagrams/System.png)
 
 ## Project Overview
 LazyTune involves reengineering the AKAI MPK Mini II MIDI keyboard into a multifaceted digital and electronic synthesizer. At the heart of the project is the Teensy 4.1 microcontroller, which is programmed to facilitate real-time autotune and vocoder functionalities. Additionally, a Raspberry Pi is utilized to adeptly manage input and output operations. Moreover, it controls the mechanisms for both the autotune and vocoder through serial communication. The MIDI keyboard, integral to our design, serves as a dynamic interface for manipulating various sound effects as well. Utilizing a Raspberry Pi, Teensy 4.1, and an audio shield, the project stands out in its signal processing and audio I/O capabilities.
@@ -21,7 +21,7 @@ The heart of Lazytune lies in its software, designed to be both robust and flexi
 
 ### Audio Processing
 Lazytune is built on a robust and modular software architecture designed to provide a comprehensive suite of audio effects:
-![Vocoder](/src/etc/vocoder.png)
+![Vocoder](/src/etc/diagrams/vocoder.png)
 - **Autotune**: This feature is intricately implemented using a combination of pitch detection and pitch shifting. Pitch detection is handled by the NoteFrequency object of the PJRC object, with parameters optimized for low-latency. The pitch shifting is implemented using a Phase Vocoder approach. This technique operates in the frequency domain, where it calculates phase differences for small segments and then reassembles the signal using the Overlap and Add method. This implementation ensures real-time responsiveness and high-quality vocal transformation.
 - **Vocoder**: A 12-band vocoder is executed on the Teensy 4.1, blending the characteristics of instrument inputs with vocal modulation. This sophisticated approach creates a wide range of unique textures, from classic robotic voices to complex and richly textured sounds.
 - **Additional Effects**: The vocoder incorporates a suite of additional effects like reverb, distortion, delay, and flanger. These effects are integrated within the vocoder's processing chain and can be interactively controlled using the AKAI MPK Mini II MIDI keyboard. This setup allows users to play and modify these effects in real-time, significantly expanding the instrument's expressive capabilities.
@@ -48,4 +48,7 @@ Lazytune is not just about creating music; it's about pushing the boundaries of 
 
 ### [Seiya Kozakai](https://github.com/skozakai)
 - **Signal Processing, Algorithm Development (C/C++), Quality Assurance**
+
+
+
 
