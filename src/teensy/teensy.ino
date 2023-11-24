@@ -43,7 +43,7 @@ AudioOutputI2S           finalOutputAudio;           //xy=1158,836
 
 AudioControlSGTL5000 sgtl5000_1;
 
-AudioConnection patchCords[30] = {
+AudioConnection patchCords[31] = {
 
   // autotune
   AudioConnection(inputAudio, 0, autotuneFilter, 0),
@@ -88,6 +88,7 @@ AudioConnection patchCords[30] = {
   // Output
   AudioConnection(masterMixer, outputVolumeControl),
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 0),
+  AudioConnection(outputVolumeControl, 0, finalOutputAudio, 1),
 };
 
 // Define the number of voices for polyphony
@@ -105,9 +106,9 @@ AudioConnection *patchCordsEnv[numVoices]; // Patchcords for Envelopes
 
 // Buffers for flanger and chorus effects
 static const int FLANGE_BUFFER_SIZE = 512;
-DMAMEM short flangeBuffer[FLANGE_BUFFER_SIZE];
+short flangeBuffer[FLANGE_BUFFER_SIZE];
 static const int CHORUS_BUFFER_SIZE = 512;
-DMAMEM short chorusBuffer[CHORUS_BUFFER_SIZE];
+short chorusBuffer[CHORUS_BUFFER_SIZE];
 
 //waveshape for distortion effects
 static const int WAVESHAPE_SIZE = 129;
@@ -134,7 +135,7 @@ float distortion1[WAVESHAPE_SIZE] = {-1, -0.9999,-0.9996,-0.99911,-0.99841,-0.99
 
 
 // Setup routine
-FLASHMEM void setup() {
+FLASHMEM void setup() { // setup stored in FLASH, which is slower (not an issue for an initialization routine)
   Serial.begin(115200);
   AudioMemory(35);
   MIDI.begin(MIDI_CHANNEL_OMNI);
@@ -150,7 +151,7 @@ FLASHMEM void setup() {
   setMixer(delayBus, 0, 0, 0, 0);
   setMixer(distortionBus, 0, 0, 0, 0);
   setMixer(masterMixer, 1, 0, 0, 0);
-  outputVolumeControl.gain(1);
+  outputVolumeControl.gain(0.15); // low output, high input (reduces noise)
 
   // initialize autotune
     // filter setup
@@ -195,7 +196,7 @@ void loop() {
 }
 
 // Read and apply serial commands
-FLASHMEM void readAndApplySerialCommands() {
+void readAndApplySerialCommands() {
   if (Serial.available() > 0) {
     // Read the incoming command
     char commandBuffer[10];
@@ -206,7 +207,7 @@ FLASHMEM void readAndApplySerialCommands() {
   }
 }
 // Read serial command into buffer
-FLASHMEM void readSerialCommand(char *buffer, size_t bufferSize) {
+void readSerialCommand(char *buffer, size_t bufferSize) {
   size_t index = 0;
   while (index < bufferSize - 1 && Serial.available()) {
     char c = Serial.read();
@@ -216,7 +217,7 @@ FLASHMEM void readSerialCommand(char *buffer, size_t bufferSize) {
   buffer[index] = '\0'; // Null-terminate the string
 }
 // Parse and apply the command
-FLASHMEM void applySerialCommand(const char *command) {
+void applySerialCommand(const char *command) {
   switch (command[0]) {
     case 'm': setMixerGain(sourceMixer, 0, command + 1); break; //dry microphone gain
     case 'c': setMixerGain(sourceMixer, 3, command + 1); break; //dry carrier signal gain
@@ -240,7 +241,7 @@ FLASHMEM void applySerialCommand(const char *command) {
     case 'o': outputVolumeControl.gain(atof(command + 1)); break; //master volume output
 
     case 'R': freeverb1.roomsize(atof(command + 1)); break; // attempt to change roomsize
-    default: Serial.println(F("Invalid effect type")); break;
+    default: Serial.println(("Invalid effect type")); break;
   }
 }
 
@@ -320,12 +321,12 @@ void autotuneLoop() {
 }
 
 // Set mixer gain
-FLASHMEM void setMixerGain(AudioMixer4& mixer, uint8_t channel, const char *gainStr) {
+void setMixerGain(AudioMixer4& mixer, uint8_t channel, const char *gainStr) {
   float gainValue = atof(gainStr);
   mixer.gain(channel, gainValue);
 }
 //edits a mixer to set gain of each channel
-FLASHMEM void setMixer(AudioMixer4& mixer, float c0, float c1, float c2, float c3){
+void setMixer(AudioMixer4& mixer, float c0, float c1, float c2, float c3){
     mixer.gain(0, c0);
     mixer.gain(1, c1);
     mixer.gain(2, c2);

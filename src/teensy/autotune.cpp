@@ -1,7 +1,6 @@
 #include "autotune.h"
 
-// internal variables for pitchShift
-
+// internal variables for pitchShift (DMAMEM allocates to RAM2, which is only allowed on global scope uninitialized variables)
 DMAMEM static float gInFIFO[MAX_FRAME_LENGTH];
 DMAMEM static float gOutFIFO[MAX_FRAME_LENGTH];
 DMAMEM static float gFFTworksp[2*MAX_FRAME_LENGTH];
