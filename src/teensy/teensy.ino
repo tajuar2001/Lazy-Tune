@@ -12,9 +12,76 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 AudioInputI2S            inputAudio;           //xy=140,143
 // -------------------------------------------------------
 // Vocoder
-// TODO: add in the rest of the vocoder system
+AudioAmplifier           modulatorGain;
 AudioMixer4              synthMixer;
 AudioMixer4              carrierMixer;
+AudioMixer4              vocoderMixer1;
+AudioMixer4              vocoderMixer2;
+AudioMixer4              vocoderMixer3;
+AudioMixer4              vocoderOut;
+// vocoder filters 1-24
+AudioFilterStateVariable filter1;
+AudioFilterStateVariable filter2;
+AudioFilterStateVariable filter3;
+AudioFilterStateVariable filter4;
+AudioFilterStateVariable filter5;
+AudioFilterStateVariable filter6;
+AudioFilterStateVariable filter7;
+AudioFilterStateVariable filter8;
+AudioFilterStateVariable filter9;
+AudioFilterStateVariable filter10;
+AudioFilterStateVariable filter11;
+AudioFilterStateVariable filter12;
+AudioFilterStateVariable filter13;
+AudioFilterStateVariable filter14;
+AudioFilterStateVariable filter15;
+AudioFilterStateVariable filter16;
+AudioFilterStateVariable filter17;
+AudioFilterStateVariable filter18;
+AudioFilterStateVariable filter19;
+AudioFilterStateVariable filter20;
+AudioFilterStateVariable filter21;
+AudioFilterStateVariable filter22;
+AudioFilterStateVariable filter23;
+AudioFilterStateVariable filter24;
+// vocoder peak 1-12
+AudioAnalyzePeak         peak1;
+AudioAnalyzePeak         peak2; 
+AudioAnalyzePeak         peak3; 
+AudioAnalyzePeak         peak4; 
+AudioAnalyzePeak         peak5; 
+AudioAnalyzePeak         peak6; 
+AudioAnalyzePeak         peak7; 
+AudioAnalyzePeak         peak8; 
+AudioAnalyzePeak         peak9; 
+AudioAnalyzePeak         peak10; 
+AudioAnalyzePeak         peak11; 
+AudioAnalyzePeak         peak12; 
+// vocoder filters 25-48
+AudioFilterStateVariable filter25;
+AudioFilterStateVariable filter26;
+AudioFilterStateVariable filter27;
+AudioFilterStateVariable filter28;
+AudioFilterStateVariable filter29;
+AudioFilterStateVariable filter30;
+AudioFilterStateVariable filter31;
+AudioFilterStateVariable filter32;
+AudioFilterStateVariable filter33;
+AudioFilterStateVariable filter34;
+AudioFilterStateVariable filter35;
+AudioFilterStateVariable filter36;
+AudioFilterStateVariable filter37;
+AudioFilterStateVariable filter38;
+AudioFilterStateVariable filter39;
+AudioFilterStateVariable filter40;
+AudioFilterStateVariable filter41;
+AudioFilterStateVariable filter42;
+AudioFilterStateVariable filter43;
+AudioFilterStateVariable filter44;
+AudioFilterStateVariable filter45;
+AudioFilterStateVariable filter46;
+AudioFilterStateVariable filter47;
+AudioFilterStateVariable filter48;
 
 // -------------------------------------------------------
 // autotune
@@ -42,7 +109,7 @@ AudioOutputI2S           finalOutputAudio;           //xy=1158,836
 
 AudioControlSGTL5000 sgtl5000_1;
 
-AudioConnection patchCords[31] = {
+AudioConnection patchCords[108] = {
 
   // autotune
   AudioConnection(inputAudio, 0, autotuneFilter, 0),
@@ -50,13 +117,96 @@ AudioConnection patchCords[31] = {
   AudioConnection(autotuneFilter, 0, autotuner, 0),
   AudioConnection(autotuner, 0, sourceMixer, 1),
   
-  // Vocoder lower half + synthesizer
+  // Vocoder
   AudioConnection(inputAudio, 1, carrierMixer, 0),
   AudioConnection(synthMixer, 0, carrierMixer, 1),
-
-  // TODO rest of lower half of vocoder
+  AudioConnection(inputAudio, 0, modulatorGain, 0),
+  // modulatorGain to filters
+  AudioConnection(modulatorGain, 0, filter1, 0),
+  AudioConnection(modulatorGain, 0, filter3, 0),
+  AudioConnection(modulatorGain, 0, filter5, 0),
+  AudioConnection(modulatorGain, 0, filter7, 0),
+  AudioConnection(modulatorGain, 0, filter9, 0),
+  AudioConnection(modulatorGain, 0, filter11, 0),
+  AudioConnection(modulatorGain, 0, filter13, 0),
+  AudioConnection(modulatorGain, 0, filter15, 0),
+  AudioConnection(modulatorGain, 0, filter17, 0),
+  AudioConnection(modulatorGain, 0, filter19, 0),
+  AudioConnection(modulatorGain, 0, filter21, 0),
+  AudioConnection(modulatorGain, 0, filter23, 0),
+  // filter to filter (analyzer)
+  AudioConnection(filter1, 0, filter2, 0),
+  AudioConnection(filter3, 0, filter4, 0),
+  AudioConnection(filter5, 0, filter6, 0),
+  AudioConnection(filter7, 0, filter8, 0),
+  AudioConnection(filter9, 0, filter10, 0),
+  AudioConnection(filter11, 0, filter12, 0),
+  AudioConnection(filter13, 0, filter14, 0),
+  AudioConnection(filter15, 0, filter16, 0),
+  AudioConnection(filter17, 0, filter18, 0),
+  AudioConnection(filter19, 0, filter20, 0),
+  AudioConnection(filter21, 0, filter22, 0),
+  AudioConnection(filter23, 0, filter24, 0),
+  // filter to peak
+  AudioConnection(filter2, 0, peak1, 0),
+  AudioConnection(filter4, 0, peak2, 0),
+  AudioConnection(filter6, 0, peak3, 0),
+  AudioConnection(filter8, 0, peak4, 0),
+  AudioConnection(filter10, 0, peak5, 0),
+  AudioConnection(filter12, 0, peak6, 0),
+  AudioConnection(filter14, 0, peak7, 0),
+  AudioConnection(filter16, 0, peak8, 0),
+  AudioConnection(filter18, 0, peak9, 0),
+  AudioConnection(filter20, 0, peak10, 0),
+  AudioConnection(filter22, 0, peak11, 0),
+  AudioConnection(filter24, 0, peak12, 0),
+  //
   AudioConnection(carrierMixer, 0, sourceMixer, 3),
   AudioConnection(carrierMixer, 0, multiply1, 1),
+  // carrierMixer to filters
+  AudioConnection(carrierMixer, 0, filter25, 0),
+  AudioConnection(carrierMixer, 0, filter27, 0),
+  AudioConnection(carrierMixer, 0, filter29, 0),
+  AudioConnection(carrierMixer, 0, filter31, 0),
+  AudioConnection(carrierMixer, 0, filter33, 0),
+  AudioConnection(carrierMixer, 0, filter35, 0),
+  AudioConnection(carrierMixer, 0, filter37, 0),
+  AudioConnection(carrierMixer, 0, filter39, 0),
+  AudioConnection(carrierMixer, 0, filter41, 0),
+  AudioConnection(carrierMixer, 0, filter43, 0),
+  AudioConnection(carrierMixer, 0, filter45, 0),
+  AudioConnection(carrierMixer, 0, filter47, 0),
+  // filters to filters (envelope)
+  AudioConnection(filter25, 0, filter26, 0),
+  AudioConnection(filter27, 0, filter28, 0),
+  AudioConnection(filter29, 0, filter30, 0),
+  AudioConnection(filter31, 0, filter32, 0),
+  AudioConnection(filter33, 0, filter34, 0),
+  AudioConnection(filter35, 0, filter36, 0),
+  AudioConnection(filter37, 0, filter38, 0),
+  AudioConnection(filter39, 0, filter40, 0),
+  AudioConnection(filter41, 0, filter42, 0),
+  AudioConnection(filter43, 0, filter44, 0),
+  AudioConnection(filter45, 0, filter46, 0),
+  AudioConnection(filter47, 0, filter48, 0),
+  // filters to mixers
+  AudioConnection(filter26, 0, vocoderMixer1, 0),
+  AudioConnection(filter28, 0, vocoderMixer1, 1),
+  AudioConnection(filter30, 0, vocoderMixer1, 2),
+  AudioConnection(filter32, 0, vocoderMixer1, 3),
+  AudioConnection(filter34, 0, vocoderMixer2, 0),
+  AudioConnection(filter36, 0, vocoderMixer2, 1),
+  AudioConnection(filter38, 0, vocoderMixer2, 2),
+  AudioConnection(filter40, 0, vocoderMixer2, 3),
+  AudioConnection(filter42, 0, vocoderMixer3, 0),
+  AudioConnection(filter44, 0, vocoderMixer3, 1),
+  AudioConnection(filter46, 0, vocoderMixer3, 2),
+  AudioConnection(filter48, 0, vocoderMixer3, 3),
+  //
+  AudioConnection(vocoderMixer1, 0, vocoderOut, 0),
+  AudioConnection(vocoderMixer2, 0, vocoderOut, 1),
+  AudioConnection(vocoderMixer3, 0, vocoderOut, 2),
+  AudioConnection(vocoderOut, 0, sourceMixer, 2),
 
   // sourceMixer
   AudioConnection(inputAudio, 0, sourceMixer, 0),
@@ -137,25 +287,84 @@ float distortion1[WAVESHAPE_SIZE] = {-1, -0.9999,-0.9996,-0.99911,-0.99841,-0.99
                     0.95062,0.95512,0.95938,0.96342,0.96724,0.97083,0.97421,0.97737,0.98032,0.98305,0.98558,
                     0.9879,0.99001,0.99192,0.99362,0.99512,0.99642,0.99751,0.99841,0.99911,0.9996,0.9999,1};
 
+// values for vocoder
+const float res = 5;                                            // this is used as resonance value of all state variable filters
+const float attack = 0.995884;                                   // controls attack and decay, must not exceed or equal 1,
+                                                                // going near 1 decreases attack, must be set at a right value to minimize distortion,
+                                                                // while still responsive to voice, this parameter is CPU speed dependent
+const float threshold = 0.1;                                    // threshold value used to limit sound levels going to mixer used as amplitude
+                                                                // modulators
+const float freq[37] = {                                        // filter frequency table, tuned to specified musical notes
+  110.0000000,  // A2   freq[0]
+  123.4708253,  // B2   freq[1]
+  138.5913155,  // C#3  freq[2]
+  155.5634919,  // D#3  freq[3]
+  174.6141157,  // F3   freq[4]
+  195.9977180,  // G3   freq[5]
+  220.0000000,  // A3   freq[6]
+  246.9416506,  // B3   freq[7]
+  277.1826310,  // C#4  freq[8]
+  311.1269837,  // D#4  freq[9]
+  349.2282314,  // F4   freq[10]
+  391.9954360,  // G4   freq[11]
+  440.0000000,  // A4   freq[12]
+  493.8833013,  // B4   freq[13]
+  554.3652620,  // C#5  freq[14]
+  622.2539674,  // D#5  freq[15]
+  698.4564629,  // F5   freq[16]
+  783.9908720,  // G5   freq[17]
+  880.0000000,  // A5   freq[18]
+  987.7666025,  // B5   freq[19]
+  1108.730524,  // C#6  freq[20]
+  1244.507935,  // D#6  freq[21]
+  1396.912926,  // F6   freq[22]
+  1567.981744,  // G6   freq[23]
+  1760.000000,  // A6   freq[24]
+  1975.533205,  // B6   freq[25]
+  2217.461048,  // C#7  freq[26]
+  2489.015870,  // D#7  freq[27]
+  2793.825851,  // F7   freq[28]
+  3135.963488,  // G7   freq[29]
+  3520.000000,  // A7   freq[30]
+  3951.066410,  // B7   freq[31]
+  4434.922096,  // C#8  freq[32]
+  4978.031740,  // D#8  freq[33]
+  5587.651703,  // F8   freq[34]
+  6271.926976,  // G8   freq[35]
+  7040.000000   // A8   freq[36]
+};
+float peak1raw, peak2raw, peak3raw, peak4raw, peak5raw, peak6raw,
+  peak7raw, peak8raw, peak9raw, peak10raw, peak11raw, peak12raw;
+float peak1val, peak2val, peak3val, peak4val, peak5val, peak6val,
+  peak7val, peak8val, peak9val, peak10val, peak11val, peak12val;
+
+// performance test
+elapsedMillis serialtimer;
 
 // Setup routine
-FLASHMEM void setup() { // setup stored in FLASH, which is slower (not an issue for an initialization routine)
+void setup() { 
   Serial.begin(115200);
-  AudioMemory(35);
+  AudioMemory(64);
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
   // enable Audio Shield
   sgtl5000_1.enable();
   sgtl5000_1.volume(0.7);
+  sgtl5000_1.adcHighPassFilterDisable();
   
   // enable Mixer Gain
-  setMixer(sourceMixer, 1, 1, 0, 1);  
-  setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7);  
-  setMixer(carrierMixer, 0, 1, 0, 0);  
+  setMixer(sourceMixer, 1, 0, 0, 0);
+  setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7);
+  setMixer(carrierMixer, 0, 1, 0, 0);
+  setMixer(vocoderOut, 1, 1, 1, 0);
   setMixer(delayBus, 0, 0, 0, 0);
   setMixer(distortionBus, 0, 0, 0, 0);
   setMixer(masterMixer, 1, 0, 0, 0);
-  outputVolumeControl.gain(0.15); // low output, high input (reduces noise)
+  outputVolumeControl.gain(0.5); // low output, high input (reduces noise)
+
+  // initialize vocoder
+  modulatorGain.gain(0.5);
+  Vocoderinit();
 
   // initialize autotune
     // filter setup
@@ -185,8 +394,10 @@ FLASHMEM void setup() { // setup stored in FLASH, which is slower (not an issue 
     
     patchCordsWav[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
     patchCordsEnv[i] = new AudioConnection(envelope[i], 0, synthMixer, i);
-  }
+  } 
 
+  AudioProcessorUsageMaxReset();                                // and reset these things
+  AudioMemoryUsageMaxReset();                        
 }
 
 // Loop routine
@@ -196,7 +407,21 @@ void loop() {
   // Read control from MIDI Signal
   readAndApplyMIDIControl();
 
+  vocoderLoop();
   autotuneLoop();
+
+  if(serialtimer >= 100) {                                      // and report MCU usage 10x per second
+    serialtimer = 0;
+    Serial.print("Processor Usage: ");
+    Serial.print(AudioProcessorUsage());
+    Serial.print("\nProcessor Usage Max: ");
+    Serial.print(AudioProcessorUsageMax());
+    Serial.print("\nMemory Usage: ");
+    Serial.print(AudioMemoryUsage());
+    Serial.print("\nMemory Usage Max: ");
+    Serial.print(AudioMemoryUsageMax());
+    Serial.print("\n\n\n\n\n\n\n\n\n\n");
+  }
 }
 
 // Read and apply serial commands
@@ -244,6 +469,7 @@ void applySerialCommand(const char *command) {
 
     case 'o': outputVolumeControl.gain(atof(command + 1)); break; //master volume output
 
+    case 'C': carrierMixToggle(); break; // toggle between input channel 2 or synthMixer
     case 'R': freeverb1.roomsize(atof(command + 1)); break; // attempt to change roomsize
     default: Serial.println(("Invalid effect type")); break;
   }
@@ -370,6 +596,77 @@ void readAndApplyMIDIControl() {
 
 
 */
+// vocoder init
+void Vocoderinit(){
+
+  // set the resonance of the filters
+  filter1.resonance(res); filter2.resonance(res); filter3.resonance(res); filter4.resonance(res); filter5.resonance(res);
+  filter6.resonance(res); filter7.resonance(res); filter8.resonance(res); filter9.resonance(res); filter10.resonance(res);
+  filter11.resonance(res); filter12.resonance(res); filter13.resonance(res); filter14.resonance(res); filter15.resonance(res);
+  filter16.resonance(res); filter17.resonance(res); filter18.resonance(res); filter19.resonance(res); filter20.resonance(res);
+  filter21.resonance(res); filter22.resonance(res); filter23.resonance(res); filter24.resonance(res); filter25.resonance(res);
+  filter26.resonance(res); filter27.resonance(res); filter28.resonance(res); filter29.resonance(res); filter30.resonance(res);
+  filter31.resonance(res); filter32.resonance(res); filter33.resonance(res); filter34.resonance(res); filter35.resonance(res);
+  filter36.resonance(res); filter37.resonance(res); filter38.resonance(res); filter39.resonance(res); filter40.resonance(res);
+  filter41.resonance(res); filter42.resonance(res); filter43.resonance(res); filter44.resonance(res); filter45.resonance(res);
+  filter46.resonance(res); filter47.resonance(res); filter48.resonance(res);
+
+  // set the frequencies of the filters
+  // pairs of cascaded filters for optimal frequency isolation
+  // two sets of filters are used: for voice signal analysis and instrument/synth filter
+  filter1.frequency(freq[0]); filter2.frequency(freq[0]); filter3.frequency(freq[3]); filter4.frequency(freq[3]);
+  filter5.frequency(freq[6]); filter6.frequency(freq[6]); filter7.frequency(freq[9]); filter8.frequency(freq[9]);
+  filter9.frequency(freq[12]); filter10.frequency(freq[12]); filter11.frequency(freq[15]); filter12.frequency(freq[15]);
+  filter13.frequency(freq[18]); filter14.frequency(freq[18]); filter15.frequency(freq[21]); filter16.frequency(freq[21]);
+  filter17.frequency(freq[24]); filter18.frequency(freq[24]); filter19.frequency(freq[27]); filter20.frequency(freq[27]);
+  filter21.frequency(freq[30]); filter22.frequency(freq[30]); filter23.frequency(freq[33]); filter24.frequency(freq[33]);
+  filter25.frequency(freq[0]); filter26.frequency(freq[0]); filter27.frequency(freq[3]); filter28.frequency(freq[3]);
+  filter29.frequency(freq[6]); filter30.frequency(freq[6]); filter31.frequency(freq[9]); filter32.frequency(freq[9]);
+  filter33.frequency(freq[12]); filter34.frequency(freq[12]); filter35.frequency(freq[15]); filter36.frequency(freq[15]);
+  filter37.frequency(freq[18]); filter38.frequency(freq[18]); filter39.frequency(freq[21]); filter40.frequency(freq[21]);
+  filter41.frequency(freq[24]); filter42.frequency(freq[24]); filter43.frequency(freq[27]); filter44.frequency(freq[27]);
+  filter45.frequency(freq[30]); filter46.frequency(freq[30]); filter47.frequency(freq[33]); filter48.frequency(freq[33]);
+
+  // initialize peak values   
+  peak1raw = 1; peak2raw = 1; peak3raw = 1; peak4raw =  1; peak5raw =  1; peak6raw =  1;
+  peak7raw = 1; peak8raw = 1; peak9raw = 1; peak10raw = 1; peak11raw = 1; peak12raw = 1;
+  peak1val = 1; peak2val = 1; peak3val = 1; peak4val =  1; peak5val =  1; peak6val =  1;
+  peak7val = 1; peak8val = 1; peak9val = 1; peak10val = 1; peak11val = 1; peak12val = 1;
+
+  setMixer(vocoderMixer1, 0, 0, 0, 0);
+  setMixer(vocoderMixer2, 0, 0, 0, 0);
+  setMixer(vocoderMixer3, 0, 0, 0, 0);
+}
+
+// vocoder code in main loop
+void vocoderLoop() {
+    // store peak values at each read
+  if(peak1.available()) {peak1raw = peak1.read();}
+  if(peak2.available()) {peak2raw = peak2.read();}
+  if(peak3.available()) {peak3raw = peak3.read();}
+  if(peak4.available()) {peak4raw = peak4.read();}
+  if(peak5.available()) {peak5raw = peak5.read();}
+  if(peak6.available()) {peak6raw = peak6.read();}
+  if(peak7.available()) {peak7raw = peak7.read();}
+  if(peak8.available()) {peak8raw = peak8.read();}
+  if(peak9.available()) {peak9raw = peak9.read();}
+  if(peak10.available()) {peak10raw = peak10.read();}
+  if(peak11.available()) {peak11raw = peak11.read();}
+  if(peak12.available()) {peak12raw = peak12.read();}
+
+  setEnvelope(peak1raw, peak1val, vocoderMixer1, 0);         // simulate envelope follower: it gets the envelope of the filtered signal through
+  setEnvelope(peak2raw, peak2val, vocoderMixer1, 1);         // the peak values and is used to determine the direction (increase or decrease) of
+  setEnvelope(peak3raw, peak3val, vocoderMixer1, 2);         // the mixer gain
+  setEnvelope(peak4raw, peak4val, vocoderMixer1, 3);         // peak values used to set mixer gain are divided to increase or multiplied to decrease
+  setEnvelope(peak5raw, peak5val, vocoderMixer2, 0);         // the values must not change fast to avoid distortion
+  setEnvelope(peak6raw, peak6val, vocoderMixer2, 1);
+  setEnvelope(peak7raw, peak7val, vocoderMixer2, 2);
+  setEnvelope(peak8raw, peak8val, vocoderMixer2, 3);
+  setEnvelope(peak9raw, peak9val, vocoderMixer3, 0);
+  setEnvelope(peak10raw, peak10val, vocoderMixer3, 1);
+  setEnvelope(peak11raw, peak11val, vocoderMixer3, 2);
+  setEnvelope(peak12raw, peak12val, vocoderMixer3, 3);
+}
 
 // autotune code in main loop
 void autotuneLoop() {
@@ -384,6 +681,20 @@ void autotuneLoop() {
     }
 }
 
+// set envelope
+void setEnvelope(float peakRaw, float& peakVal, AudioMixer4& mixer, int channel){
+  if((peakRaw * threshold) > peakVal) {
+    peakVal = peakVal / attack;
+    peakVal = (peakVal > 1) ? 1 : peakVal;
+    mixer.gain(channel, peakVal);
+  }
+  if((peakRaw * threshold) < peakVal) {
+    peakVal = peakVal * attack;
+    peakVal = (peakVal > 1) ? 1 : peakVal;
+    mixer.gain(channel, peakVal);
+  }
+}
+
 // Set mixer gain
 void setMixerGain(AudioMixer4& mixer, uint8_t channel, const char *gainStr) {
   float gainValue = atof(gainStr);
@@ -395,6 +706,16 @@ void setMixer(AudioMixer4& mixer, float c0, float c1, float c2, float c3){
     mixer.gain(1, c1);
     mixer.gain(2, c2);
     mixer.gain(3, c3);
+}
+
+bool isSynth = true;
+void carrierMixToggle() {
+  if(isSynth) {
+    setMixer(carrierMixer, 1, 0, 0, 0);
+  } else {
+    setMixer(carrierMixer, 0, 1, 0, 0);
+  }
+  isSynth = !isSynth;
 }
 
 // MIDi control functions
