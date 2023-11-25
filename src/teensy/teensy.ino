@@ -260,9 +260,9 @@ AudioConnection *patchCordsEnv[numVoices]; // Patchcords for Envelopes
 
 // Buffers for flanger and chorus effects
 static const int FLANGE_BUFFER_SIZE = 512;
-short flangeBuffer[FLANGE_BUFFER_SIZE];
+DMAMEM short flangeBuffer[FLANGE_BUFFER_SIZE];
 static const int CHORUS_BUFFER_SIZE = 512;
-short chorusBuffer[CHORUS_BUFFER_SIZE];
+DMAMEM short chorusBuffer[CHORUS_BUFFER_SIZE];
 
 //waveshape for distortion effects
 static const int WAVESHAPE_SIZE = 129;
@@ -292,7 +292,7 @@ const float res = 5;                                            // this is used 
 const float attack = 0.995884;                                   // controls attack and decay, must not exceed or equal 1,
                                                                 // going near 1 decreases attack, must be set at a right value to minimize distortion,
                                                                 // while still responsive to voice, this parameter is CPU speed dependent
-const float threshold = 0.1;                                    // threshold value used to limit sound levels going to mixer used as amplitude
+const float threshold = 0.25;                                    // threshold value used to limit sound levels going to mixer used as amplitude
                                                                 // modulators
 const float freq[37] = {                                        // filter frequency table, tuned to specified musical notes
   110.0000000,  // A2   freq[0]
@@ -356,14 +356,14 @@ void setup() {
   setMixer(sourceMixer, 1, 0, 0, 0);
   setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7);
   setMixer(carrierMixer, 0, 1, 0, 0);
-  setMixer(vocoderOut, 1, 1, 1, 0);
+  setMixer(vocoderOut, 0.25, 0.25, 0.25, 0);
   setMixer(delayBus, 0, 0, 0, 0);
   setMixer(distortionBus, 0, 0, 0, 0);
   setMixer(masterMixer, 1, 0, 0, 0);
   outputVolumeControl.gain(0.5); // low output, high input (reduces noise)
 
   // initialize vocoder
-  modulatorGain.gain(0.5);
+  modulatorGain.gain(1);
   Vocoderinit();
 
   // initialize autotune
@@ -397,7 +397,10 @@ void setup() {
   } 
 
   AudioProcessorUsageMaxReset();                                // and reset these things
-  AudioMemoryUsageMaxReset();                        
+  AudioMemoryUsageMaxReset();
+  filter1.processorUsageMaxReset();
+  autotuner.processorUsageMaxReset();
+  serialtimer = 0;                        
 }
 
 // Loop routine
@@ -420,6 +423,10 @@ void loop() {
     Serial.print(AudioMemoryUsage());
     Serial.print("\nMemory Usage Max: ");
     Serial.print(AudioMemoryUsageMax());
+    Serial.print("\nfilter1 processor usage: ");
+    Serial.print(filter1.processorUsageMax());
+    Serial.print("\nautotune processor usage: ");
+    Serial.print(autotuner.processorUsageMax());
     Serial.print("\n\n\n\n\n\n\n\n\n\n");
   }
 }
@@ -469,6 +476,7 @@ void applySerialCommand(const char *command) {
 
     case 'o': outputVolumeControl.gain(atof(command + 1)); break; //master volume output
 
+    case 'S': threshold = command + 1; break; // change threshold value
     case 'C': carrierMixToggle(); break; // toggle between input channel 2 or synthMixer
     case 'R': freeverb1.roomsize(atof(command + 1)); break; // attempt to change roomsize
     default: Serial.println(("Invalid effect type")); break;
@@ -640,6 +648,7 @@ void Vocoderinit(){
 
 // vocoder code in main loop
 void vocoderLoop() {
+  AudioNoInterrupts();
     // store peak values at each read
   if(peak1.available()) {peak1raw = peak1.read();}
   if(peak2.available()) {peak2raw = peak2.read();}
@@ -666,6 +675,7 @@ void vocoderLoop() {
   setEnvelope(peak10raw, peak10val, vocoderMixer3, 1);
   setEnvelope(peak11raw, peak11val, vocoderMixer3, 2);
   setEnvelope(peak12raw, peak12val, vocoderMixer3, 3);
+  AudioInterrupts();
 }
 
 // autotune code in main loop
