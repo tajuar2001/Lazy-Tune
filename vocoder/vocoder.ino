@@ -191,32 +191,19 @@ AudioSynthWaveform   waveform[numVoices];  // Create an array of waveforms for p
 AudioEffectEnvelope envelope[numVoices];  // Define envelope for each voice
 AudioConnection      *patchCords[numVoices * 2];  // Patch cords for waveforms to mixer
 
-AudioConnection patchWaveforms[numVoices] {
+AudioConnection *patchWaveforms[numVoices] {
   AudioConnection(waveform[0], 0, envelope[0], 0),
   AudioConnection(waveform[1], 0, envelope[1], 0),
   AudioConnection(waveform[2], 0, envelope[2], 0),
-  AudioConnection(waveform[3], 0, envelope[3], 0),
+  AudioConnection(waveform[3], 0, envelope[3], 0)
 };
 
-AudioConnection patchEnvelopes[numVoices] {
+AudioConnection *patchEnvelopes[numVoices] {
   AudioConnection(envelope[0], 0, synthMixer, 0),
   AudioConnection(envelope[1], 0, synthMixer, 1),
   AudioConnection(envelope[2], 0, synthMixer, 2),
-  AudioConnection(envelope[3], 0, synthMixer, 3),
+  AudioConnection(envelope[3], 0, synthMixer, 3)
 };
-
-// Set up waveforms and mixer
-for (int i = 0; i < numVoices; i++) {
-  waveform[i].begin(WAVEFORM_SINE);
-  waveform[i].amplitude(0);
-}
- 
-for (int i = 0; i < numVoices; i++) {
-  envelope[i].attack(10); // Attack time in milliseconds
-  envelope[i].decay(100); // Decay time
-  envelope[i].sustain(0.5); // Sustain level
-  envelope[i].release(300); // Release time
-}
 
 const float res = 5;                                            // this is used as resonance value of all state variable filters
 const float attack = 0.99588;                                   // controls attack and decay, must not exceed or equal 1,
@@ -282,6 +269,19 @@ void setup() {
   //pinMode(ledPin, OUTPUT);    // used to check timing using a oscilloscope
   //pinMode(FIR_PASSTHRU, INPUT_PULLUP);
   
+  // Set up waveforms and mixer
+  for (int i = 0; i < numVoices; i++) {
+    waveform[i].begin(WAVEFORM_SINE);
+    waveform[i].amplitude(0);
+  }
+  
+  for (int i = 0; i < numVoices; i++) {
+    envelope[i].attack(10); // Attack time in milliseconds
+    envelope[i].decay(100); // Decay time
+    envelope[i].sustain(0.5); // Sustain level
+    envelope[i].release(300); // Release time
+  }
+
   // allocate memory for the audio library
   AudioMemory(64);  // how memory blocks are really needed?
 
@@ -489,7 +489,7 @@ void Vocoderinit(){
 }
 
 //edits a mixer to set gain of each channel
-void setMixer(AudioMixer4 mixer, float c0, float c1, float c2, float c3){
+void setMixer(AudioMixer4& mixer, float c0, float c1, float c2, float c3){
     mixer.gain(0, c0);
     mixer.gain(1, c1);
     mixer.gain(2, c2);

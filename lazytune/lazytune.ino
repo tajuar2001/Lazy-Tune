@@ -478,7 +478,7 @@ void Lazyinit(){
     setMixer(sourceMixer, 1, 0, 0, 0);
     // setMixer(delayBus, 0, 0, 0, 0);
     // setMixer(distortionBus, 0, 0, 0, 0);
-    // setMixer(master, 1, 0, 0, 0);
+    setMixer(master, 1, 0, 0, 0);
     // //set initial gain
     amp1.gain(0.5);
     // modulatorGain.gain(1);
