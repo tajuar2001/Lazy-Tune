@@ -687,59 +687,44 @@ void carrierMixToggle() {
   isSynth = !isSynth;
 }
 
-const unsigned long DEBOUNCE_TIME = 35; // Debounce time in milliseconds
-unsigned long lastNoteTime[numVoices] = {0};
-
+// MIDi control functions
 void noteOn(uint8_t note, uint8_t velocity) {
   int freeVoice = -1;
   unsigned long oldestTime = millis();
   int oldestVoice = 0;
 
-  // Check for rapid-fire NoteOn events
   for (int i = 0; i < numVoices; i++) {
-    if (millis() - lastNoteTime[i] < DEBOUNCE_TIME) {
-      return; // Ignore this NoteOn event as it's too close to the last one
-    }
-  }
-
-  // Voice allocation logic
-  for (int i = 0; i < numVoices; i++) {
-    if (voiceNote[i] == note) {
+    if (voiceNote[i] == note) { // TODO: test if this prevents playing a duplicate note, which I think is the cause
       freeVoice = i;
       break;
     }
     if (!voiceUsed[i]) { 
       freeVoice = i;
-      break;
+      //break;
     } else if(voiceStartTime[i] < oldestTime) {
       oldestTime = voiceStartTime[i];
       oldestVoice = i;
     }
   }
 
-  if(freeVoice > -1) { // Found a free voice
+  if(freeVoice > -1) { // found a free voice
     float frequency = noteToFrequency(note);
     waveform[freeVoice].frequency(frequency);
     waveform[freeVoice].amplitude(velocity / 127.0);
     envelope[freeVoice].noteOn();
     voiceUsed[freeVoice] = true;
-    voiceNote[freeVoice] = note;
+    voiceNote[freeVoice] = note; // Store the note number that this voice is now playing
     voiceStartTime[freeVoice] = millis();
-    lastNoteTime[freeVoice] = millis(); // Update the last note time
-  } else { // Replace with an existing voice
-    noteOff(voiceNote[oldestVoice]); // Turn off the note currently using the oldest voice
+  } else { // replace with an existing voice
     float frequency = noteToFrequency(note);
     waveform[oldestVoice].frequency(frequency);
     waveform[oldestVoice].amplitude(velocity / 127.0);
     envelope[oldestVoice].noteOn();
     voiceUsed[oldestVoice] = true;
-    voiceNote[oldestVoice] = note;
+    voiceNote[oldestVoice] = note; // Store the note number that this voice is now playing
     voiceStartTime[oldestVoice] = millis();
-    lastNoteTime[oldestVoice] = millis(); // Update the last note time
   }
 }
-
-
 
 void noteOff(uint8_t note) {
   for (int i = 0; i < numVoices; i++) {
