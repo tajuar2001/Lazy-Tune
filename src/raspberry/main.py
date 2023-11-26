@@ -103,15 +103,25 @@ def main():
             print(f"{button_name} state: {'On' if button_states[button_name] else 'Off'}")
             if button_name == "Microphone":
                 if button_states[button_name]:
-                    send_serial_data("d1")
+                    send_serial_data("m1")
                 else:
-                    send_serial_data("d0")
+                    send_serial_data("m0")
             elif button_name == "Carrier":
                 if button_states[button_name]:
                     send_serial_data("c1")
                 else:
                     send_serial_data("c0")
-            
+            elif button_name == "Autotune":
+                if button_states[button_name]:
+                    send_serial_data("a1")
+                else:
+                    send_serial_data("a0")
+            elif button_name == "Vocoder":
+                if button_states[button_name]:
+                    send_serial_data("v1")
+                else:
+                    send_serial_data("v0")
+                    
 
         # Maintain state for each button
         global button_states
