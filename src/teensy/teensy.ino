@@ -7,7 +7,7 @@
 #include "autotune.h"
 
 MIDI_CREATE_DEFAULT_INSTANCE();
-#define AUDIO_GUITARTUNER_BLOCKS  20 // redefinition of notefreq parameter to reduce latency
+#define AUDIO_GUITARTUNER_BLOCKS  16 // redefinition of notefreq parameter to reduce latency
 
 AudioInputI2S            inputAudio;           //xy=140,143
 // -------------------------------------------------------
@@ -247,7 +247,7 @@ AudioConnection patchCords[108] = {
 
 // Define the number of voices for polyphony
 const int numVoices = 4;
-int voiceNote[numVoices] = {-1};  // keep track of the note information
+int voiceNote[numVoices] = {0};  // keep track of the note information
 bool voiceUsed[numVoices] = {false}; // keep track of usage
 unsigned long voiceStartTime[numVoices] = {0}; // keep track of timing
 
@@ -514,6 +514,24 @@ void readAndApplyMIDIControl() {
         int controlNum = arg1; // integer 1 to 8 (the knob number)
         int controlVal = usbMIDI.getData2(); // integer 0 to 127
 
+        if(controlNum == 1) { // MASTER_VOLUME
+          outputVolumeControl.gain(convertKnob(controlVal, 0, 3));
+        }
+        if(controlNum == 4) { // AUTOTUNE_PITCH_BEND
+          autotuner.manualPitchOffset = convertKnob(controlVal, AUTOTUNE_MIN_PS, AUTOTUNE_MAX_PS);
+        }
+        if(controlNum == 5) { // MICROPHONE
+          sourceMixer.gain(0, convertKnob(controlVal, 0, 1)); 
+        }
+        if(controlNum == 6) { // CARRIER
+          sourceMixer.gain(3, convertKnob(controlVal, 0, 1)); 
+        }
+        if(controlNum == 7) { // VOCODER
+          sourceMixer.gain(2, convertKnob(controlVal, 0, 1.5)); 
+        }
+        if(controlNum == 8) { // AUTOTUNE
+          sourceMixer.gain(1, convertKnob(controlVal, 0, 1.2)); 
+        }
         Serial.print(controlNum);
         Serial.println(controlVal);
         // do something with these values
@@ -522,7 +540,6 @@ void readAndApplyMIDIControl() {
       case midi::PitchBend: // PITCH STICK
       {
         int pitchValue = arg1; // The amount of bend to send (in a signed integer format), between MIDI_PITCHBEND_MIN and MIDI_PITCHBEND_MAX, center value is 0.
-        autotuner.manualPitchOffset = AUTOTUNE_MIN_PS + ((pitchValue - MIDI_PITCHBEND_MIN) / static_cast<float>(MIDI_PITCHBEND_MAX - MIDI_PITCHBEND_MIN)) * (AUTOTUNE_MAX_PS - AUTOTUNE_MIN_PS);
         Serial.print(pitchValue);
         break;
       }
@@ -546,64 +563,6 @@ void readAndApplyMIDIControl() {
 }
 
 
-/*
-Alternative Version of the MIDI CONTROL 
-
-
-// Constants for MIDI notes and controls
-const int MIDI_NOTE_MIN = 48;
-const int MIDI_NOTE_MAX = 72;
-const int MIDI_CONTROL_MIN = 1;
-const int MIDI_CONTROL_MAX = 8;
-
-// Handle Note On/Off events
-void handleNoteEvent(int note, int velocity, bool isNoteOn) {
-  if(isNoteOn && velocity > 0) {
-    noteOn(note, velocity);
-  } else {
-    noteOff(note);
-  }
-}
-
-// Handle Control Change event
-void handleControlChangeEvent(int controlNum, int controlVal) {
-  Serial.print(controlNum);
-  Serial.println(controlVal);
-  // Additional control change handling
-}
-
-// Read and apply MIDI control input
-void readAndApplyMIDIControl() {
-  // Channel 0: Keys, Knobs
-  if(usbMIDI.read(0)) {
-    int arg1 = usbMIDI.getData1();
-    switch (usbMIDI.getType()) {
-      case midi::NoteOn:
-      case midi::NoteOff:
-        handleNoteEvent(arg1, usbMIDI.getData2(), usbMIDI.getType() == midi::NoteOn);
-        break;
-      case midi::ControlChange:
-        handleControlChangeEvent(arg1, usbMIDI.getData2());
-        break;
-      case midi::PitchBend:
-        // Pitch bend handling
-        break;
-    }
-  }
-
-  // Channel 1: Pads
-  if(usbMIDI.read(1)) {
-    if (usbMIDI.getType() == midi::NoteOn) {
-      Serial.print(usbMIDI.getData1());
-      Serial.print(usbMIDI.getData2());
-    }
-    // NoteOff for pads can be handled if needed
-  }
-}
-
-
-
-*/
 // vocoder init
 void Vocoderinit(){
 
@@ -683,11 +642,11 @@ void autotuneLoop() {
       // read current fundamental frequency into AutoTune
     if(notefreq.available()) {
       float note = notefreq.read();
-      float prob = notefreq.probability();
+      //float prob = notefreq.probability();
       // Serial.printf("Note: %3.2f | Probably %.2f\n", note, prob);
-      if(prob > 0.9) {
+      //if(prob > 0.9) {
         autotuner.currFrequency = note;
-      }
+      //}
     }
 }
 
@@ -770,8 +729,8 @@ void noteOn(uint8_t note, uint8_t velocity) {
 void noteOff(uint8_t note) {
   for (int i = 0; i < numVoices; i++) {
     if (voiceUsed[i] && voiceNote[i] == note) { // Check if this voice is playing the note
-      waveform[i].amplitude(0);
       waveform[i].frequency(0);
+      waveform[i].amplitude(0);
       envelope[i].noteOff();
       voiceUsed[i] = false;
       voiceNote[i] = -1; // Reset the note number for this voice
@@ -781,4 +740,10 @@ void noteOff(uint8_t note) {
 
 float noteToFrequency(uint8_t note) {
   return 440.0 * pow(2.0, (note - 69) / 12.0);
+}
+
+// convert a knob value from range 0, 127 to a range lower_bound, upper_bound
+float convertKnob(uint8_t knob_value, uint8_t lower_bound, uint8_t upper_bound) {
+  return lower_bound + ((knob_value - 0) / static_cast<float>(127 - 0)) * (upper_bound - lower_bound);
+  // autotuner.manualPitchOffset = AUTOTUNE_MIN_PS + ((controlVal - 0) / static_cast<float>(127 - 0)) * (AUTOTUNE_MAX_PS - AUTOTUNE_MIN_PS);
 }
