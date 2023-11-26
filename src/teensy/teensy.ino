@@ -292,7 +292,7 @@ const float res = 5;                                            // this is used 
 const float attack = 0.995884;                                   // controls attack and decay, must not exceed or equal 1,
                                                                 // going near 1 decreases attack, must be set at a right value to minimize distortion,
                                                                 // while still responsive to voice, this parameter is CPU speed dependent
-const float threshold = 0.25;                                    // threshold value used to limit sound levels going to mixer used as amplitude
+float threshold = 0.5;                                    // threshold value used to limit sound levels going to mixer used as amplitude
                                                                 // modulators
 const float freq[37] = {                                        // filter frequency table, tuned to specified musical notes
   110.0000000,  // A2   freq[0]
@@ -353,10 +353,10 @@ void setup() {
   sgtl5000_1.adcHighPassFilterDisable();
   
   // enable Mixer Gain
-  setMixer(sourceMixer, 1, 0, 0, 0);
+  setMixer(sourceMixer, 0, 0, 1, 1);
   setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7);
   setMixer(carrierMixer, 0, 1, 0, 0);
-  setMixer(vocoderOut, 0.25, 0.25, 0.25, 0);
+  setMixer(vocoderOut, 0.3, 0.3, 0.3, 0);
   setMixer(delayBus, 0, 0, 0, 0);
   setMixer(distortionBus, 0, 0, 0, 0);
   setMixer(masterMixer, 1, 0, 0, 0);
@@ -378,8 +378,8 @@ void setup() {
   flange1.begin(flangeBuffer, FLANGE_BUFFER_SIZE, 100, 100, 100);
   chorus1.begin(chorusBuffer, CHORUS_BUFFER_SIZE, 4);
 
-  bitcrusher1.bits(8);
-  bitcrusher1.sampleRate(44100);
+  bitcrusher1.bits(6);
+  bitcrusher1.sampleRate(26000);
   distortion.shape(distortion1, WAVESHAPE_SIZE);
   limiter.shape(limiter1, WAVESHAPE_SIZE);
 
@@ -476,7 +476,7 @@ void applySerialCommand(const char *command) {
 
     case 'o': outputVolumeControl.gain(atof(command + 1)); break; //master volume output
 
-    case 'S': threshold = command + 1; break; // change threshold value
+    case 'S': threshold = atof(command + 1); break; // change threshold value for vocoder
     case 'C': carrierMixToggle(); break; // toggle between input channel 2 or synthMixer
     case 'R': freeverb1.roomsize(atof(command + 1)); break; // attempt to change roomsize
     default: Serial.println(("Invalid effect type")); break;
