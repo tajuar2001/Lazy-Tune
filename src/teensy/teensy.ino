@@ -415,19 +415,19 @@ void loop() {
 
   if(serialtimer >= 100) {                                      // and report MCU usage 10x per second
     serialtimer = 0;
-    // Serial.print("Processor Usage: ");
-    // Serial.print(AudioProcessorUsage());
-    // Serial.print("\nProcessor Usage Max: ");
-    // Serial.print(AudioProcessorUsageMax());
-    // Serial.print("\nMemory Usage: ");
-    // Serial.print(AudioMemoryUsage());
-    // Serial.print("\nMemory Usage Max: ");
-    // Serial.print(AudioMemoryUsageMax());
-    // Serial.print("\nfilter1 processor usage: ");
-    // Serial.print(filter1.processorUsageMax());
-    // Serial.print("\nautotune processor usage: ");
-    // Serial.print(autotuner.processorUsageMax());
-    // Serial.print("\n\n\n\n\n\n\n\n\n\n");
+    Serial.print("Processor Usage: ");
+    Serial.print(AudioProcessorUsage());
+    Serial.print("\nProcessor Usage Max: ");
+    Serial.print(AudioProcessorUsageMax());
+    Serial.print("\nMemory Usage: ");
+    Serial.print(AudioMemoryUsage());
+    Serial.print("\nMemory Usage Max: ");
+    Serial.print(AudioMemoryUsageMax());
+    Serial.print("\nfilter1 processor usage: ");
+    Serial.print(filter1.processorUsageMax());
+    Serial.print("\nautotune processor usage: ");
+    Serial.print(autotuner.processorUsageMax());
+    Serial.print("\n\n\n\n\n\n\n\n\n\n");
   }
 }
 
@@ -534,7 +534,7 @@ void readAndApplyMIDIControl() {
           outputVolumeControl.gain(convertKnob(controlVal, 0, 6));
         }
         if(controlNum == 4) { // AUTOTUNE_PITCH_BEND
-          autotuner.manualPitchOffset = convertKnob(controlVal, AUTOTUNE_MIN_PS, AUTOTUNE_MAX_PS);
+          autotuner.manualPitchOffset = convertKnob(controlVal, -0.5, 2);
         }
         if(controlNum == 5) { // MICROPHONE
           sourceMixer.gain(0, convertKnob(controlVal, 0, 2)); 
@@ -577,7 +577,6 @@ void readAndApplyMIDIControl() {
       }
     } // end MIDI
 }
-
 
 // vocoder init
 void Vocoderinit(){
@@ -658,11 +657,20 @@ void autotuneLoop() {
       // read current fundamental frequency into AutoTune
     if(notefreq.available()) {
       float note = notefreq.read();
-      //float prob = notefreq.probability();
-      // Serial.printf("Note: %3.2f | Probably %.2f\n", note, prob);
-      //if(prob > 0.9) {
-        autotuner.currFrequency = note;
-      //}
+      float prob = notefreq.probability();
+      if(prob > 0.99) {
+        if(note > 80 && note < 880) {
+          Serial.printf("Note: %3.2f | Probably %.2f\n", note, prob);
+          autotuner.currFrequency = note;
+          Serial.print("target: ");
+      Serial.println(autotuner.computeNearestSemitone(note));
+      Serial.print("manual: ");
+      Serial.println(autotuner.manualPitchOffset);
+      Serial.print("shift ratio: ");
+      float pitchShift = autotuner.computeNearestSemitone(note) / note + autotuner.manualPitchOffset;
+      pitchShift = (pitchShift < 0.51) ? 0.51 : ((pitchShift > 1.99) ? 1.99 : pitchShift);
+        }
+      }
     }
 }
 
@@ -759,7 +767,7 @@ float noteToFrequency(uint8_t note) {
 }
 
 // convert a knob value from range 0, 127 to a range lower_bound, upper_bound
-float convertKnob(uint8_t knob_value, uint8_t lower_bound, uint8_t upper_bound) {
+float convertKnob(float knob_value, float lower_bound, float upper_bound) {
   return lower_bound + ((knob_value - 0) / static_cast<float>(127 - 0)) * (upper_bound - lower_bound);
   // autotuner.manualPitchOffset = AUTOTUNE_MIN_PS + ((controlVal - 0) / static_cast<float>(127 - 0)) * (AUTOTUNE_MAX_PS - AUTOTUNE_MIN_PS);
 }

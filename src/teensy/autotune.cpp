@@ -1,17 +1,5 @@
 #include "autotune.h"
 
-// internal variables for pitchShift (DMAMEM allocates to RAM2, which is only allowed on global scope uninitialized variables)
-DMAMEM static float gInFIFO[MAX_FRAME_LENGTH];
-DMAMEM static float gOutFIFO[MAX_FRAME_LENGTH];
-DMAMEM static float gFFTworksp[2*MAX_FRAME_LENGTH];
-DMAMEM static float gLastPhase[MAX_FRAME_LENGTH/2+1];
-DMAMEM static float gSumPhase[MAX_FRAME_LENGTH/2+1];
-DMAMEM static float gOutputAccum[2*MAX_FRAME_LENGTH];
-DMAMEM static float gAnaFreq[MAX_FRAME_LENGTH];
-DMAMEM static float gAnaMagn[MAX_FRAME_LENGTH];
-DMAMEM static float gSynFreq[MAX_FRAME_LENGTH];
-DMAMEM static float gSynMagn[MAX_FRAME_LENGTH];
-
 // ---------------------------------
 
 // main update function
@@ -27,26 +15,15 @@ void CustomAutoTune::update(void) {
 
     // convert input to floats with proper scaling
     for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
-        floatInput[i] = (float)((float)block->data[i])/(32768);
+        floatInput[i] = (float)((float)block->data[i])/(INT_MAX);
     }
     
     pitchShift(computeNearestSemitone(currFrequency), &floatInput[0], &floatInput[0]);
-    // switch(currMethod) {
-    //   // none, original, cepstrum, psola
-    //   case autotuneMethod::none: {
-    //     // do NOTHING
-    //     break;
-    //   }
-    //   case autotuneMethod::original: {
-    //     CustomAutoTune::autotuneOriginal(floatInput);
-    //     break;
-    //   }
-    // } // switch
 
   // Convert the processed float32 signal back to the original array
   // and scale back to int16
   for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
-      block->data[i] = (int16_t)(floatInput[i] * 32768); // Convert back to 16-bit int
+      block->data[i] = (int16_t)(floatInput[i] * INT_MAX); // Convert back to 16-bit int
   }
     transmit(block);
     release(block);
@@ -60,16 +37,28 @@ void CustomAutoTune::update(void) {
  */
  float CustomAutoTune::computeNearestSemitone(float noteFrequency) {
     // Calculate the nearest semitone frequency
-    int nearestSemitone = round(12 * log2((noteFrequency + 1e-9) / 440));
+    int nearestSemitone = round(12.0 * log2((noteFrequency + 1e-9) / 440));
     float nearestFrequency = 440 * pow(2, nearestSemitone / 12.0);
     return nearestFrequency;
 }
 
+  DMAMEM static float gInFIFO[MAX_FRAME_LENGTH];
+  DMAMEM static float gOutFIFO[MAX_FRAME_LENGTH];
+  DMAMEM static float gFFTworksp[2*MAX_FRAME_LENGTH];
+  DMAMEM static float gLastPhase[MAX_FRAME_LENGTH/2+1];
+  DMAMEM static float gSumPhase[MAX_FRAME_LENGTH/2+1];
+  DMAMEM static float gOutputAccum[2*MAX_FRAME_LENGTH];
+  DMAMEM static float gAnaFreq[MAX_FRAME_LENGTH];
+  DMAMEM static float gAnaMagn[MAX_FRAME_LENGTH];
+  DMAMEM static float gSynFreq[MAX_FRAME_LENGTH];
+  DMAMEM static float gSynMagn[MAX_FRAME_LENGTH];
+
  // Pitch-Shift to Target Frequency
 void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata) {
+
     // Calculate the pitch shift factor based on the target and current frequency
     float pitchShift = targetPitch / currFrequency + manualPitchOffset;
-    pitchShift = (pitchShift < AUTOTUNE_LOWER_LIMIT) ? AUTOTUNE_LOWER_LIMIT : ((pitchShift > AUTOTUNE_UPPER_LIMIT) ? AUTOTUNE_UPPER_LIMIT : pitchShift);
+    pitchShift = (pitchShift < 0.51) ? 0.51 : ((pitchShift > 1.99) ? 1.99 : pitchShift);
     long osamp = 4;
     float sampleRate = 44100;
 
@@ -132,7 +121,7 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
 
         /* compute magnitude and phase */
         magn = 2.*sqrt(real*real + imag*imag);
-        phase = atan2(imag,real);
+        phase = smbAtan2(imag,real);
 
         /* compute phase difference */
         tmp = phase - gLastPhase[k];
@@ -266,5 +255,14 @@ void smbFft(float *fftBuffer, long fftSize, long sign) {
     }
   }
 }
-
+double smbAtan2(double x, double y) {
+  double signx;
+  if (x > 0.) signx = 1.;  
+  else signx = -1.;
+  
+  if (x == 0.) return 0.;
+  if (y == 0.) return signx * M_PI / 2.;
+  
+  return atan2(x, y);
+}
 // -------------------------------

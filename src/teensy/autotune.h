@@ -3,12 +3,18 @@
 
 #include <Arduino.h>
 #include <AudioStream.h>
+#include <Audio.h>
+// -------------------------------
+#include <string.h>
+#include <math.h>
+#include <stdio.h>
 
 // -------------------------------
 #define M_PI 3.14159265358979323846
 #define MAX_FRAME_LENGTH 8192
 
 void smbFft(float *fftBuffer, long fftFrameSize, long sign);
+double smbAtan2(double x, double y);
 // -------------------------------
 
 
@@ -17,10 +23,6 @@ void smbFft(float *fftBuffer, long fftFrameSize, long sign);
 
 #define AUTOTUNE_FFT_SIZE 128
 #define AUTOTUNE_SAMPLING_RATE AUDIO_SAMPLE_RATE
-#define AUTOTUNE_LOWER_LIMIT 0.529731547
-#define AUTOTUNE_UPPER_LIMIT 1.88774863
-#define AUTOTUNE_MIN_PS -0.4
-#define AUTOTUNE_MAX_PS 0.9
 
 // enum autotuneMethod { none, original };
 
@@ -28,8 +30,6 @@ class CustomAutoTune : public AudioStream {
 public:
     CustomAutoTune(void): AudioStream(1,inputQueueArray) {
       // any extra initialization
-      currFrequency = 20;
-      manualPitchOffset = 0;
     }
 
     // AudioStream object updater
