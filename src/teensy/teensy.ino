@@ -415,19 +415,19 @@ void loop() {
 
   if(serialtimer >= 100) {                                      // and report MCU usage 10x per second
     serialtimer = 0;
-    Serial.print("Processor Usage: ");
-    Serial.print(AudioProcessorUsage());
-    Serial.print("\nProcessor Usage Max: ");
-    Serial.print(AudioProcessorUsageMax());
-    Serial.print("\nMemory Usage: ");
-    Serial.print(AudioMemoryUsage());
-    Serial.print("\nMemory Usage Max: ");
-    Serial.print(AudioMemoryUsageMax());
-    Serial.print("\nfilter1 processor usage: ");
-    Serial.print(filter1.processorUsageMax());
-    Serial.print("\nautotune processor usage: ");
-    Serial.print(autotuner.processorUsageMax());
-    Serial.print("\n\n\n\n\n\n\n\n\n\n");
+    // Serial.print("Processor Usage: ");
+    // Serial.print(AudioProcessorUsage());
+    // Serial.print("\nProcessor Usage Max: ");
+    // Serial.print(AudioProcessorUsageMax());
+    // Serial.print("\nMemory Usage: ");
+    // Serial.print(AudioMemoryUsage());
+    // Serial.print("\nMemory Usage Max: ");
+    // Serial.print(AudioMemoryUsageMax());
+    // Serial.print("\nfilter1 processor usage: ");
+    // Serial.print(filter1.processorUsageMax());
+    // Serial.print("\nautotune processor usage: ");
+    // Serial.print(autotuner.processorUsageMax());
+    // Serial.print("\n\n\n\n\n\n\n\n\n\n");
   }
 }
 
@@ -495,17 +495,33 @@ void readAndApplyMIDIControl() {
       {
         int keyNote = arg1; // integer 48 to 72 on the keyboard
         int keyVelocity = usbMIDI.getData2(); // 0 to 100
-
-        if(keyVelocity > 0) {
-          noteOn(keyNote, keyVelocity);
+        Serial.println("note ON");
+        if (keyNote == 72) {
+            for (int i = 0; i < numVoices; i++) {
+              waveform[i].frequency(0);
+              waveform[i].amplitude(0);
+              envelope[i].noteOff();
+              voiceUsed[i] = false;
+              voiceNote[i] = -1; // Reset the note number for this voice
+            }
         } else {
-          noteOff(keyNote);
+          if(keyVelocity > 0) {
+            noteOn(keyNote, keyVelocity);
+          } else {
+            noteOff(keyNote);
+          }
         }
+        Serial.print("note");
+        Serial.println(keyNote);
+
         break;
       }
       case midi::NoteOff: // KEY_RELEASE
       {// same as NoteOn
         int keyNote = arg1; // integer 48 to 72 on the keyboard
+        Serial.println("note OFF");
+        Serial.print("note");
+        Serial.println(keyNote);
         noteOff(keyNote);
         break;
       }
@@ -515,22 +531,22 @@ void readAndApplyMIDIControl() {
         int controlVal = usbMIDI.getData2(); // integer 0 to 127
 
         if(controlNum == 1) { // MASTER_VOLUME
-          outputVolumeControl.gain(convertKnob(controlVal, 0, 3));
+          outputVolumeControl.gain(convertKnob(controlVal, 0, 6));
         }
         if(controlNum == 4) { // AUTOTUNE_PITCH_BEND
           autotuner.manualPitchOffset = convertKnob(controlVal, AUTOTUNE_MIN_PS, AUTOTUNE_MAX_PS);
         }
         if(controlNum == 5) { // MICROPHONE
-          sourceMixer.gain(0, convertKnob(controlVal, 0, 1)); 
+          sourceMixer.gain(0, convertKnob(controlVal, 0, 2)); 
         }
         if(controlNum == 6) { // CARRIER
           sourceMixer.gain(3, convertKnob(controlVal, 0, 1)); 
         }
         if(controlNum == 7) { // VOCODER
-          sourceMixer.gain(2, convertKnob(controlVal, 0, 1.5)); 
+          sourceMixer.gain(2, convertKnob(controlVal, 0, 2)); 
         }
         if(controlNum == 8) { // AUTOTUNE
-          sourceMixer.gain(1, convertKnob(controlVal, 0, 1.2)); 
+          sourceMixer.gain(1, convertKnob(controlVal, 0, 2)); 
         }
         Serial.print(controlNum);
         Serial.println(controlVal);
