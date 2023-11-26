@@ -687,12 +687,22 @@ void carrierMixToggle() {
   isSynth = !isSynth;
 }
 
-// MIDi control functions
+const unsigned long DEBOUNCE_TIME = 35; // Debounce time in milliseconds
+unsigned long lastNoteTime[numVoices] = {0};
+
 void noteOn(uint8_t note, uint8_t velocity) {
   int freeVoice = -1;
   unsigned long oldestTime = millis();
   int oldestVoice = 0;
 
+  // Check for rapid-fire NoteOn events
+  for (int i = 0; i < numVoices; i++) {
+    if (millis() - lastNoteTime[i] < DEBOUNCE_TIME) {
+      return; // Ignore this NoteOn event as it's too close to the last one
+    }
+  }
+
+  // Voice allocation logic
   for (int i = 0; i < numVoices; i++) {
     if (voiceNote[i] == note) {
       freeVoice = i;
@@ -707,7 +717,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
     }
   }
 
-  if(freeVoice > -1) { // found a free voice
+  if(freeVoice > -1) { // Found a free voice
     float frequency = noteToFrequency(note);
     waveform[freeVoice].frequency(frequency);
     waveform[freeVoice].amplitude(velocity / 127.0);
@@ -715,7 +725,8 @@ void noteOn(uint8_t note, uint8_t velocity) {
     voiceUsed[freeVoice] = true;
     voiceNote[freeVoice] = note;
     voiceStartTime[freeVoice] = millis();
-  } else { // replace with an existing voice
+    lastNoteTime[freeVoice] = millis(); // Update the last note time
+  } else { // Replace with an existing voice
     noteOff(voiceNote[oldestVoice]); // Turn off the note currently using the oldest voice
     float frequency = noteToFrequency(note);
     waveform[oldestVoice].frequency(frequency);
@@ -724,8 +735,10 @@ void noteOn(uint8_t note, uint8_t velocity) {
     voiceUsed[oldestVoice] = true;
     voiceNote[oldestVoice] = note;
     voiceStartTime[oldestVoice] = millis();
+    lastNoteTime[oldestVoice] = millis(); // Update the last note time
   }
 }
+
 
 
 void noteOff(uint8_t note) {
