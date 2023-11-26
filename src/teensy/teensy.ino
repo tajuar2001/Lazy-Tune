@@ -7,7 +7,7 @@
 #include "autotune.h"
 
 MIDI_CREATE_DEFAULT_INSTANCE();
-#define AUDIO_GUITARTUNER_BLOCKS  16 // redefinition of notefreq parameter to reduce latency
+#define AUDIO_GUITARTUNER_BLOCKS  20 // redefinition of notefreq parameter to reduce latency
 
 AudioInputI2S            inputAudio;           //xy=140,143
 // -------------------------------------------------------
@@ -735,9 +735,13 @@ void noteOn(uint8_t note, uint8_t velocity) {
   int oldestVoice = 0;
 
   for (int i = 0; i < numVoices; i++) {
-    if (voiceNote[i] == note || !voiceUsed[i]) { // TODO: test if this prevents playing a duplicate note, which I think is the cause
+    if (voiceNote[i] == note) { // TODO: test if this prevents playing a duplicate note, which I think is the cause
       freeVoice = i;
       break;
+    }
+    if (!voiceUsed[i]) { 
+      freeVoice = i;
+      //break;
     } else if(voiceStartTime[i] < oldestTime) {
       oldestTime = voiceStartTime[i];
       oldestVoice = i;
@@ -751,6 +755,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
     envelope[freeVoice].noteOn();
     voiceUsed[freeVoice] = true;
     voiceNote[freeVoice] = note; // Store the note number that this voice is now playing
+    voiceStartTime[freeVoice] = millis();
   } else { // replace with an existing voice
     float frequency = noteToFrequency(note);
     waveform[oldestVoice].frequency(frequency);
@@ -758,6 +763,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
     envelope[oldestVoice].noteOn();
     voiceUsed[oldestVoice] = true;
     voiceNote[oldestVoice] = note; // Store the note number that this voice is now playing
+    voiceStartTime[oldestVoice] = millis();
   }
 }
 
