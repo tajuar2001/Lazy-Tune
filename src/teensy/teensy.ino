@@ -694,13 +694,13 @@ void noteOn(uint8_t note, uint8_t velocity) {
   int oldestVoice = 0;
 
   for (int i = 0; i < numVoices; i++) {
-    if (voiceNote[i] == note) { // TODO: test if this prevents playing a duplicate note, which I think is the cause
+    if (voiceNote[i] == note) {
       freeVoice = i;
       break;
     }
     if (!voiceUsed[i]) { 
       freeVoice = i;
-      //break;
+      break;
     } else if(voiceStartTime[i] < oldestTime) {
       oldestTime = voiceStartTime[i];
       oldestVoice = i;
@@ -713,18 +713,20 @@ void noteOn(uint8_t note, uint8_t velocity) {
     waveform[freeVoice].amplitude(velocity / 127.0);
     envelope[freeVoice].noteOn();
     voiceUsed[freeVoice] = true;
-    voiceNote[freeVoice] = note; // Store the note number that this voice is now playing
+    voiceNote[freeVoice] = note;
     voiceStartTime[freeVoice] = millis();
   } else { // replace with an existing voice
+    noteOff(voiceNote[oldestVoice]); // Turn off the note currently using the oldest voice
     float frequency = noteToFrequency(note);
     waveform[oldestVoice].frequency(frequency);
     waveform[oldestVoice].amplitude(velocity / 127.0);
     envelope[oldestVoice].noteOn();
     voiceUsed[oldestVoice] = true;
-    voiceNote[oldestVoice] = note; // Store the note number that this voice is now playing
+    voiceNote[oldestVoice] = note;
     voiceStartTime[oldestVoice] = millis();
   }
 }
+
 
 void noteOff(uint8_t note) {
   for (int i = 0; i < numVoices; i++) {
