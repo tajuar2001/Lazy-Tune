@@ -59,7 +59,7 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
     // Calculate the pitch shift factor based on the target and current frequency
     float pitchShift = targetPitch / currFrequency + manualPitchOffset;
     pitchShift = (pitchShift < 0.51) ? 0.51 : ((pitchShift > 1.99) ? 1.99 : pitchShift);
-    long osamp = 4;
+    long osamp = 4; // TODO: try 4, 8
     float sampleRate = 44100;
 
   static long gRover = false, gInit = false;
