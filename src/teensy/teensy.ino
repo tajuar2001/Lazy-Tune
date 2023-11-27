@@ -385,7 +385,7 @@ void setup() {
 
   // Set up waveforms and mixer
   for (int i = 0; i < numVoices; i++) {
-    //waveform[i].begin(WAVEFORM_SAWTOOTH);
+    waveform[i].begin(WAVEFORM_SAWTOOTH);
     waveform[i].amplitude(0);
     envelope[i].attack(10); // Attack time in milliseconds
     envelope[i].decay(100); // Decay time
