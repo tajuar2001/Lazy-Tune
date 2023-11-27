@@ -396,10 +396,10 @@ void setup() {
     patchCordsEnv[i] = new AudioConnection(envelope[i], 0, synthMixer, i);
   } 
 
+  AudioProcessorUsageMaxReset();                                // and reset these things
   AudioMemoryUsageMaxReset();
   filter1.processorUsageMaxReset();
   autotuner.processorUsageMaxReset();
-  AudioProcessorUsageMaxReset();                                // and reset these things
   serialtimer = 0;                        
 }
 
@@ -424,9 +424,9 @@ void loop() {
     Serial.print("\nMemory Usage Max: ");
     Serial.print(AudioMemoryUsageMax());
     Serial.print("\nfilter1 processor usage: ");
-    Serial.print(filter1.processorUsage());
+    Serial.print(filter1.processorUsageMax());
     Serial.print("\nautotune processor usage: ");
-    Serial.print(autotuner.processorUsage());
+    Serial.print(autotuner.processorUsageMax());
     Serial.print("\n\n\n\n\n\n\n\n\n\n");
   }
 }
