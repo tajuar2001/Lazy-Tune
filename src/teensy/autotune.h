@@ -21,7 +21,7 @@ double smbAtan2(double x, double y);
 #include "arm_math.h"
 #include "arm_common_tables.h"
 
-#define AUTOTUNE_FFT_SIZE 128
+#define AUTOTUNE_FFT_SIZE 512
 #define AUTOTUNE_SAMPLING_RATE AUDIO_SAMPLE_RATE
 
 // enum autotuneMethod { none, original };

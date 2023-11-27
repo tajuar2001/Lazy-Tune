@@ -7,7 +7,7 @@
 #include "autotune.h"
 
 MIDI_CREATE_DEFAULT_INSTANCE();
-#define AUDIO_GUITARTUNER_BLOCKS  16 // redefinition of notefreq parameter to reduce latency
+#define AUDIO_GUITARTUNER_BLOCKS  12 // redefinition of notefreq parameter to reduce latency
 
 AudioInputI2S            inputAudio;           //xy=140,143
 // -------------------------------------------------------
@@ -114,7 +114,7 @@ AudioConnection patchCords[108] = {
   // autotune
   AudioConnection(inputAudio, 0, autotuneFilter, 0),
   AudioConnection(autotuneFilter, 0, notefreq, 0),
-  AudioConnection(autotuneFilter, 0, autotuner, 0),
+  AudioConnection(inputAudio, 0, autotuner, 0),
   AudioConnection(autotuner, 0, sourceMixer, 1),
   
   // Vocoder
@@ -353,14 +353,14 @@ void setup() {
   sgtl5000_1.adcHighPassFilterDisable();
   
   // enable Mixer Gain
-  setMixer(sourceMixer, 0, 0, 1, 1);
-  setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7);
-  setMixer(carrierMixer, 0, 1, 0, 0);
-  setMixer(vocoderOut, 0.3, 0.3, 0.3, 0);
-  setMixer(delayBus, 0, 0, 0, 0);
-  setMixer(distortionBus, 0, 0, 0, 0);
-  setMixer(masterMixer, 1, 0, 0, 0);
-  outputVolumeControl.gain(0.5); // low output, high input (reduces noise)
+  setMixer(sourceMixer, 0, 0, 0, 0); // KNOB CONTROL (4)
+  setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7); // DEFAULT
+  setMixer(carrierMixer, 0, 1, 0, 0); // DEFAULT
+  setMixer(vocoderOut, 0.3, 0.3, 0.3, 0); // DEFAULT
+  setMixer(delayBus, 0, 0, 0, 0); // GUI
+  setMixer(distortionBus, 0, 0, 0, 0); // GUI
+  setMixer(masterMixer, 0, 0, 0, 0); // KNOB CONTROL (2)
+  outputVolumeControl.gain(0); // KNOB CONTROL (1)
 
   // initialize vocoder
   modulatorGain.gain(1);
@@ -497,6 +497,7 @@ void readAndApplyMIDIControl() {
         int keyVelocity = usbMIDI.getData2(); // 0 to 100
         Serial.println("note ON");
         if (keyNote == 72) {
+            // reset all synth keys
             for (int i = 0; i < numVoices; i++) {
               waveform[i].frequency(0);
               waveform[i].amplitude(0);
@@ -504,6 +505,8 @@ void readAndApplyMIDIControl() {
               voiceUsed[i] = false;
               voiceNote[i] = -1; // Reset the note number for this voice
             }
+            // reset autotune manualPitchOffset
+            autotuner.manualPitchOffset = 0;
         } else {
           if(keyVelocity > 0) {
             noteOn(keyNote, keyVelocity);
@@ -532,6 +535,13 @@ void readAndApplyMIDIControl() {
 
         if(controlNum == 1) { // MASTER_VOLUME
           outputVolumeControl.gain(convertKnob(controlVal, 0, 6));
+        }
+        if(controlNum == 2) { // DRY SIGNAL
+          masterMixer.gain(0, convertKnob(controlVal, 0, 1));
+        }
+        if(controlNum == 3) { // EFFECT SIGNALS (DISTORTION, DELAY BUS)
+          masterMixer.gain(1, convertKnob(controlVal, 0, 1));
+          masterMixer.gain(2, convertKnob(controlVal, 0, 1));
         }
         if(controlNum == 4) { // AUTOTUNE_PITCH_BEND
           autotuner.manualPitchOffset = convertKnob(controlVal, -0.5, 2);
@@ -660,15 +670,15 @@ void autotuneLoop() {
       float prob = notefreq.probability();
       if(prob > 0.99) {
         if(note > 80 && note < 880) {
-          Serial.printf("Note: %3.2f | Probably %.2f\n", note, prob);
-          autotuner.currFrequency = note;
-          Serial.print("target: ");
-      Serial.println(autotuner.computeNearestSemitone(note));
-      Serial.print("manual: ");
-      Serial.println(autotuner.manualPitchOffset);
-      Serial.print("shift ratio: ");
-      float pitchShift = autotuner.computeNearestSemitone(note) / note + autotuner.manualPitchOffset;
-      pitchShift = (pitchShift < 0.51) ? 0.51 : ((pitchShift > 1.99) ? 1.99 : pitchShift);
+          //Serial.printf("Note: %3.2f | Probably %.2f\n", note + 10, prob);
+          autotuner.currFrequency = note + 10;
+          // Serial.print("target: ");
+          // Serial.println(autotuner.computeNearestSemitone(autotuner.currFrequency));
+          // Serial.print("manual: ");
+          // Serial.println(autotuner.manualPitchOffset);
+          // Serial.print("shift ratio: ");
+          // float pitchShift = autotuner.computeNearestSemitone(autotuner.currFrequency) / autotuner.currFrequency + autotuner.manualPitchOffset;
+          // pitchShift = (pitchShift < 0.51) ? 0.51 : ((pitchShift > 1.99) ? 1.99 : pitchShift);
         }
       }
     }
