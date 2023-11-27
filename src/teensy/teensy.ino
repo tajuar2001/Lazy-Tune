@@ -479,6 +479,11 @@ void applySerialCommand(const char *command) {
     case 'S': threshold = atof(command + 1); break; // change threshold value for vocoder
     case 'C': carrierMixToggle(); break; // toggle between input channel 2 or synthMixer
     case 'R': freeverb1.roomsize(atof(command + 1)); break; // attempt to change roomsize
+
+    case 'I': setWaveformsSine(); break; //change waveform type to a sine, saw, square, or triangle wave
+    case 'A': setWaveformsSaw(); break;
+    case 'T': setWaveformsTri(); break;
+    case 'Q': setWaveformsSquare(); break;
     default: Serial.println(("Invalid effect type")); break;
   }
 }
@@ -697,6 +702,52 @@ void setEnvelope(float peakRaw, float& peakVal, AudioMixer4& mixer, int channel)
     mixer.gain(channel, peakVal);
   }
 }
+
+//set waveforms for synthesizer
+void setWaveformsSine(){
+  for (int i = 0; i < numVoices; i++) {
+    waveform[i].begin(WAVEFORM_SINE);
+    waveform[i].amplitude(0);
+    envelope[i].attack(10); // Attack time in milliseconds
+    envelope[i].decay(100); // Decay time
+    envelope[i].sustain(0.5); // Sustain level
+    envelope[i].release(500); // Release time
+  } 
+}
+
+void setWaveformsSaw(){
+  for (int i = 0; i < numVoices; i++) {
+    waveform[i].begin(WAVEFORM_SAWTOOTH);
+    waveform[i].amplitude(0);
+    envelope[i].attack(10); // Attack time in milliseconds
+    envelope[i].decay(100); // Decay time
+    envelope[i].sustain(0.5); // Sustain level
+    envelope[i].release(300); // Release time
+  } 
+}
+
+void setWaveformsSquare(){
+  for (int i = 0; i < numVoices; i++) {
+    waveform[i].begin(WAVEFORM_SQUARE);
+    waveform[i].amplitude(0);
+    envelope[i].attack(70); // Attack time in milliseconds
+    envelope[i].decay(200); // Decay time
+    envelope[i].sustain(0.7); // Sustain level
+    envelope[i].release(300); // Release time
+  } 
+}
+
+void setWaveformsTri(){
+  for (int i = 0; i < numVoices; i++) {
+    waveform[i].begin(WAVEFORM_TRIANGLE);
+    waveform[i].amplitude(0);
+    envelope[i].attack(25); // Attack time in milliseconds
+    envelope[i].decay(100); // Decay time
+    envelope[i].sustain(0.5); // Sustain level
+    envelope[i].release(300); // Release time
+  } 
+}
+
 
 // Set mixer gain
 void setMixerGain(AudioMixer4& mixer, uint8_t channel, const char *gainStr) {
