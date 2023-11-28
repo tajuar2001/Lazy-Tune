@@ -21,7 +21,6 @@ AudioEffectEnvelope envelope[numVoices];
 AudioConnection *patchCordsWav[numVoices];
 AudioConnection *patchCordsEnv[numVoices];
 
-// Effect Buffers
 static const int FLANGE_BUFFER_SIZE = 512;
 DMAMEM short flangeBuffer[FLANGE_BUFFER_SIZE];
 static const int CHORUS_BUFFER_SIZE = 512; 
@@ -32,7 +31,6 @@ float FLANGE_DEPTH  = 100;
 float FLANGE_DELAY  = 100;
 
 AudioInputI2S            inputAudio;  
-AudioPlaySdWav           playWav1;
 
 // Vocoder
 AudioAmplifier           modulatorGain;
@@ -109,12 +107,10 @@ AudioFilterStateVariable filter46;
 AudioFilterStateVariable filter47;
 AudioFilterStateVariable filter48;
 
-// --------------------------------------------------------------------------------------------
 // autotune
 AudioAnalyzeNoteFrequency notefreq;        // frequency detector
 AudioFilterBiquad        autotuneFilter;   // filter (biquad, easy lowpass filter)    
 CustomAutoTune autotuner;
-// --------------------------------------------------------------------------------------------
 
 AudioMixer4              sourceMixer;       
 
@@ -131,19 +127,12 @@ AudioEffectMultiply      multiply1;
 AudioMixer4              distortionBus;      
 
 AudioMixer4              masterMixer;        
-AudioAmplifier           drumVolumeControl;
-AudioMixer4              drumAndMaster;  
 AudioAmplifier           outputVolumeControl;          
 AudioOutputI2S           finalOutputAudio;       
 
 AudioControlSGTL5000 sgtl5000_1;
 
-AudioConnection patchCords[114] = {
-  // sd card
-  AudioConnection(playWav1, 0, drumVolumeControl, 0),
-  AudioConnection(playWav1, 0, drumVolumeControl, 1),
-  AudioConnection(drumVolumeControl, 0, drumAndMaster, 2),
-  AudioConnection(drumVolumeControl, 1, drumAndMaster, 3),
+AudioConnection patchCords[108] = {
 
   // autotune
   AudioConnection(inputAudio, 0, autotuneFilter, 0),
@@ -281,14 +270,10 @@ AudioConnection patchCords[114] = {
   AudioConnection(distortionBus, 0, masterMixer, 2),
 
   // Output
-  AudioConnection(masterMixer, 0, drumAndMaster, 0),
-  AudioConnection(masterMixer, 1, drumAndMaster, 1),
-  AudioConnection(drumAndMaster, outputVolumeControl),
+  AudioConnection(masterMixer, outputVolumeControl),
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 0),
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 1),
-  
 };
-
 
 //waveshape for distortion effects
 static const int WAVESHAPE_SIZE = 129;
@@ -362,15 +347,9 @@ float peak1raw, peak2raw, peak3raw, peak4raw, peak5raw, peak6raw,
 float peak1val, peak2val, peak3val, peak4val, peak5val, peak6val,
   peak7val, peak8val, peak9val, peak10val, peak11val, peak12val;
 
-// Use these with the Teensy Audio Shield
-#define SDCARD_CS_PIN    10
-#define SDCARD_MOSI_PIN  7   // Teensy 4 ignores this, uses pin 11
-#define SDCARD_SCK_PIN   14  // Teensy 4 ignores this, uses pin 13
-
 // performance test
 elapsedMillis serialtimer;
 
-// Setup routine
 void setup() { 
   // Serial communication setup
   Serial.begin(115200);
@@ -381,12 +360,12 @@ void setup() {
   // MIDI setup
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
-  // Audio Shield configuration
+  // Audio Shield
   sgtl5000_1.enable();
   sgtl5000_1.volume(0.7);
   sgtl5000_1.adcHighPassFilterDisable();
   
-  // Mixer gain configurations
+  // Mixer gain 
   setMixer(sourceMixer, 0, 0, 0, 0); // Control via knob (4 controls)
   setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7); // Default settings
   setMixer(carrierMixer, 0, 1, 0, 0); // Default settings
@@ -394,15 +373,13 @@ void setup() {
   setMixer(delayBus, 0, 0, 0, 0); // Controlled via GUI
   setMixer(distortionBus, 0, 0, 0, 0); // Controlled via GUI
   setMixer(masterMixer, 0, 0, 0, 0); // Control via knob (2 controls)
-  setMixer(drumAndMaster, 1, 1, 1, 1); // Default settings
   outputVolumeControl.gain(0); // Control via knob (1 control)
-  drumVolumeControl.gain(0.1); // Default settings
 
-  // Vocoder initialization
+  // Vocoder
   modulatorGain.gain(1);
   Vocoderinit();
 
-  // Autotune setup
+  // Autotune
   autotuneFilter.setLowpass(0, 3400, 0.707); // Butterworth filter configuration
   notefreq.begin(0.15); // Initialize Yin Algorithm with a 15% threshold
   autotuner.currFrequency = 20;
@@ -428,10 +405,6 @@ void setup() {
     patchCordsWav[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
     patchCordsEnv[i] = new AudioConnection(envelope[i], 0, synthMixer, i);
   } 
-
-  // initialize SD Card
-  SDcardInit();
-
   // Reset audio processor and memory usage statistics
   AudioProcessorUsageMaxReset();                                
   AudioMemoryUsageMaxReset();
@@ -509,7 +482,6 @@ void applySerialCommand(const char *command) {
     case 'S': threshold = atof(command + 1); break;                  // change threshold value for vocoder
     case 'C': carrierMixToggle(); break;                             // toggle between input channel 2 or synthMixer
 
-    // TODO: delay - reverb time, flange offset, flange depth, flange delayrate, reverb damping, chorus, bit depth, bit freq
     case 'R': freeverb1.roomsize(atof(command + 1)); break;          // freeverb roomsize
     case 'D': delay1.reverbTime(atof(command + 1)); break;           // delay time
     case 'F': FLANGE_OFFSET = atof(command + 1); flange1.voices(FLANGE_OFFSET, FLANGE_DEPTH, FLANGE_DELAY); break;
@@ -524,121 +496,86 @@ void applySerialCommand(const char *command) {
     case 'A': setWaveformsSaw(); break;
     case 'T': setWaveformsTri(); break;
     case 'Q': setWaveformsSquare(); break;
+
     default: Serial.println(("Invalid effect type")); break;
   }
 }
 
 void readAndApplyMIDIControl() {
-    if(usbMIDI.read()) {
-      int arg1 = usbMIDI.getData1();
+  if(usbMIDI.read()) {
+    int arg1 = usbMIDI.getData1();
+    switch (usbMIDI.getType()) {
+    case midi::NoteOn: 
+    {
+      int keyNote = arg1; // integer 48 to 72 on the keyboard
+      int keyVelocity = usbMIDI.getData2(); // 0 to 100
+      Serial.println("note ON");
+      if(keyVelocity > 0) {
+        noteOn(keyNote, keyVelocity);
+      } else {
+        noteOff(keyNote);
+      }
+      Serial.print("note");
+      Serial.println(keyNote);
 
-      switch (usbMIDI.getType()) {
-      case midi::NoteOn: 
-      {
-        int keyNote = arg1;
-        if (keyNote >= 48) { // keys 48 to 72
-          int keyVelocity = usbMIDI.getData2(); // 0 to 100
-          Serial.println("note ON");
-          if(keyVelocity > 0) {
-            noteOn(keyNote, keyVelocity);
-          } else {
-            noteOff(keyNote);
-          }
-          Serial.print("note");
-          Serial.println(keyNote);
-        } else { // pads 32 to 39
-          int pad_note = arg1;
-          if(pad_note == 32) {
-            playFile("DRUM1.WAV");
-          }
-          if(pad_note == 33) {
-            playFile("DRUM2.WAV");
-          }
-          if(pad_note == 34) {
-            playFile("DRUM3.WAV");
-          }
-          if(pad_note == 35) {
-            playFile("DRUM4.WAV");
-          }
-          if(pad_note == 36) {
-            playFile("DRUM5.WAV");
-          }
-          if(pad_note == 37) {
-            playFile("DRUM6.WAV");
-          }
-          if(pad_note == 38) {
-            playFile("DRUM7.WAV");
-          }
-          if(pad_note == 39) {
-            playFile("DRUM8.WAV");
-          }
-        }
-        break;
-      }
-      case midi::NoteOff:
-      {// same as NoteOn
-        int keyNote = arg1;
-        if (keyNote >= 48) { // keys integer 48 to 72 on the keyboard
-          if (keyNote == 72) {
-                // reset all synth keys
-                for (int i = 0; i < numVoices; i++) {
-                  waveform[i].frequency(0);
-                  waveform[i].amplitude(0);
-                  envelope[i].noteOff();
-                  voiceUsed[i] = false;
-                  voiceNote[i] = -1; // Reset the note number for this voice
-                }
-                // reset autotune manualPitchOffset
-                autotuner.manualPitchOffset = 0;
-          } else {
-            
-            Serial.println("note OFF");
-            Serial.print("note");
-            Serial.println(keyNote);
-            noteOff(keyNote);
-          }
-        }
-        break;
-      }
-      case midi::ControlChange: // KNOBS
-      {
-        int controlNum = arg1; // integer 1 to 8 (the knob number)
-        int controlVal = usbMIDI.getData2(); // integer 0 to 127
-
-        if(controlNum == 1) { // MASTER_VOLUME
-          outputVolumeControl.gain(convertKnob(controlVal, 0, 6));
-        }
-        if(controlNum == 2) { // DRY SIGNAL
-          masterMixer.gain(0, convertKnob(controlVal, 0, 1));
-        }
-        if(controlNum == 3) { // EFFECT SIGNALS (DISTORTION, DELAY BUS)
-          masterMixer.gain(1, convertKnob(controlVal, 0, 1));
-          masterMixer.gain(2, convertKnob(controlVal, 0, 1));
-        }
-        if(controlNum == 4) { // AUTOTUNE_PITCH_BEND
-          autotuner.manualPitchOffset = convertKnob(controlVal, -0.5, 2);
-        }
-        if(controlNum == 5) { // MICROPHONE
-          sourceMixer.gain(0, convertKnob(controlVal, 0, 2)); 
-        }
-        if(controlNum == 6) { // CARRIER
-          sourceMixer.gain(3, convertKnob(controlVal, 0, 1)); 
-        }
-        if(controlNum == 7) { // VOCODER
-          sourceMixer.gain(2, convertKnob(controlVal, 0, 2)); 
-        }
-        if(controlNum == 8) { // AUTOTUNE
-          sourceMixer.gain(1, convertKnob(controlVal, 0, 2)); 
-        }
-        break;
-      }
-      }
+      break;
     }
+    case midi::NoteOff:{
+    int keyNote = arg1; // integer 48 to 72 on the keyboard
+      if (keyNote == 72) {
+            // reset all synth keys
+            for (int i = 0; i < numVoices; i++) {
+              waveform[i].frequency(0);
+              waveform[i].amplitude(0);
+              envelope[i].noteOff();
+              voiceUsed[i] = false;
+              voiceNote[i] = -1; 
+            }
+            autotuner.manualPitchOffset = 0;
+      } else {
+        Serial.println("note OFF");
+        Serial.print("note");
+        Serial.println(keyNote);
+        noteOff(keyNote);
+      }
+      break;
+    }
+    case midi::ControlChange: { // KNOBS
+      int controlNum = arg1; // integer 1 to 8 (the knob number)
+      int controlVal = usbMIDI.getData2(); // integer 0 to 127
+
+      if(controlNum == 1) { // MASTER_VOLUME
+        outputVolumeControl.gain(convertKnob(controlVal, 0, 6));
+      }
+      if(controlNum == 2) { // DRY SIGNAL
+        masterMixer.gain(0, convertKnob(controlVal, 0, 1));
+      }
+      if(controlNum == 3) { // EFFECT SIGNALS (DISTORTION, DELAY BUS)
+        masterMixer.gain(1, convertKnob(controlVal, 0, 1));
+        masterMixer.gain(2, convertKnob(controlVal, 0, 1));
+      }
+      if(controlNum == 4) { // AUTOTUNE_PITCH_BEND
+        autotuner.manualPitchOffset = convertKnob(controlVal, -0.5, 2);
+      }
+      if(controlNum == 5) { // MICROPHONE
+        sourceMixer.gain(0, convertKnob(controlVal, 0, 2)); 
+      }
+      if(controlNum == 6) { // CARRIER
+        sourceMixer.gain(3, convertKnob(controlVal, 0, 1)); 
+      }
+      if(controlNum == 7) { // VOCODER
+        sourceMixer.gain(2, convertKnob(controlVal, 0, 2)); 
+      }
+      if(controlNum == 8) { // AUTOTUNE
+        sourceMixer.gain(1, convertKnob(controlVal, 0, 2)); 
+      }
+      break;
+    }
+    }
+  }
 }
 
-// vocoder init
 void Vocoderinit(){
-  // set the resonance of the filters
   filter1.resonance(res); filter2.resonance(res); filter3.resonance(res); filter4.resonance(res); filter5.resonance(res);
   filter6.resonance(res); filter7.resonance(res); filter8.resonance(res); filter9.resonance(res); filter10.resonance(res);
   filter11.resonance(res); filter12.resonance(res); filter13.resonance(res); filter14.resonance(res); filter15.resonance(res);
@@ -703,7 +640,6 @@ void vocoderLoop() {
   AudioInterrupts();
 }
 
-// autotune code in main loop
 void autotuneLoop() {
     if(notefreq.available()) {
       float note = notefreq.read();
@@ -795,7 +731,6 @@ void carrierMixToggle() {
   isSynth = !isSynth;
 }
 
-// MIDi control functions
 void noteOn(uint8_t note, uint8_t velocity) {
   int freeVoice = -1;
   unsigned long oldestTime = millis();
@@ -852,28 +787,4 @@ float noteToFrequency(uint8_t note) {
 
 float convertKnob(float knob_value, float lower_bound, float upper_bound) {
   return lower_bound + ((knob_value - 0) / static_cast<float>(127 - 0)) * (upper_bound - lower_bound);
-}
-
-// SD card init
-void SDcardInit() {
-  // SD Card Setup
-    SPI.setMOSI(SDCARD_MOSI_PIN);
-    SPI.setSCK(SDCARD_SCK_PIN);
-    if (!(SD.begin(SDCARD_CS_PIN))) {
-      // stop here, but print a message repetitively
-      while (1) {
-        Serial.println("Unable to access the SD card");
-        delay(500);
-      }
-    }
-}
-
-void playFile(const char *filename)
-{
-  Serial.print("Playing file: ");
-  Serial.println(filename);
-  playWav1.play(filename);
-
-  // // A brief delay for the library read WAV info
-  // delay(5);
 }
