@@ -496,18 +496,18 @@ void applySerialCommand(const char *command) {
 
     case 'o': outputVolumeControl.gain(atof(command + 1)); break;     //master volume output
 
-    case 'S': threshold = atof(command + 1); break;                  // change threshold value for vocoder
-    case 'C': carrierMixToggle(); break;                             // toggle between input channel 2 or synthMixer
+    case 'S': threshold = atof(command + 1); break;                         // change threshold value for vocoder
+    case 'C': carrierMixToggle(); break;                                    // toggle between input channel 2 or synthMixer
 
-    case 'R': freeverb1.roomsize(atof(command + 1)); break;          // freeverb roomsize
-    case 'D': delay1.reverbTime(atof(command + 1)); break;           // delay time
+    case 'R': freeverb1.roomsize(atof(command + 1)); break;                 // freeverb roomsize
+    case 'D': delay1.reverbTime(atof(command + 1)); break;                  // delay time
     case 'F': FLANGE_OFFSET = atof(command + 1); flange1.voices(FLANGE_OFFSET, FLANGE_DEPTH, FLANGE_DELAY); break;
     case 'L': FLANGE_DEPTH =  atof(command + 1); flange1.voices(FLANGE_OFFSET, FLANGE_DEPTH, FLANGE_DELAY); break;
     case 'Y': FLANGE_DELAY =  atof(command + 1); flange1.voices(FLANGE_OFFSET, FLANGE_DEPTH, FLANGE_DELAY); break;
-    case 'V': freeverb1.damping(atof(command + 1)); break;           // freeverb damping
-    case 'H': chorus1.voices(atof(command + 1)); break;              // chorus voices
-    case 'B': bitcrusher1.bits(atof(command + 1)); break;            // bit depth
-    case 'M': bitcrusher1.sampleRate(atof(command + 1)); break;      // bit frequency
+    case 'V': freeverb1.damping(atof(command + 1)); break;                  // freeverb damping
+    case 'H': chorus1.voices(static_cast<int>(atof(command + 1))); break;   // chorus voices
+    case 'B': bitcrusher1.bits(static_cast<int>(atof(command + 1))); break; // bit depth
+    case 'M': bitcrusher1.sampleRate(atof(command + 1)); break;             // bit frequency
 
     case 'I': setWaveformsSine(); break; 
     case 'A': setWaveformsSaw(); break;
