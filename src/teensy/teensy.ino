@@ -255,25 +255,23 @@ AudioConnection patchCords[108] = {
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 1),
 };
 
+// Polyphony Configuration
+const int numVoices = 4; // Total number of polyphonic voices
+int voiceNote[numVoices] = {0}; // Array to store note values for each voice
+bool voiceUsed[numVoices] = {false}; // Array to track if a voice is currently in use
+unsigned long voiceStartTime[numVoices] = {0}; // Array to store start time of each voice for timing control
 
-// Define the number of voices for polyphony
-const int numVoices = 4;
-int voiceNote[numVoices] = {0};  // keep track of the note information
-bool voiceUsed[numVoices] = {false}; // keep track of usage
-unsigned long voiceStartTime[numVoices] = {0}; // keep track of timing
+// Audio Components for Synthesis
+AudioSynthWaveform waveform[numVoices]; // Array of waveform objects for polyphonic synthesis
+AudioEffectEnvelope envelope[numVoices]; // Envelope effect for each voice
+AudioConnection *patchCordsWav[numVoices]; // Array of audio connections for waveforms
+AudioConnection *patchCordsEnv[numVoices]; // Array of audio connections for envelopes
 
-//Audio Components for synthesis
-AudioSynthWaveform   waveform[numVoices];  // Create an array of waveforms for polyphony
-AudioEffectEnvelope envelope[numVoices];  // Define envelope for each voice
-AudioConnection *patchCordsWav[numVoices]; // Patchcords for WaveForms
-AudioConnection *patchCordsEnv[numVoices]; // Patchcords for Envelopes
-
-
-// Buffers for flanger and chorus effects
-static const int FLANGE_BUFFER_SIZE = 512;
-DMAMEM short flangeBuffer[FLANGE_BUFFER_SIZE];
-static const int CHORUS_BUFFER_SIZE = 512;
-DMAMEM short chorusBuffer[CHORUS_BUFFER_SIZE];
+// Effect Buffers
+static const int FLANGE_BUFFER_SIZE = 512; // Size of the buffer for flanger effect
+DMAMEM short flangeBuffer[FLANGE_BUFFER_SIZE]; // Memory allocation for flanger buffer
+static const int CHORUS_BUFFER_SIZE = 512; // Size of the buffer for chorus effect
+DMAMEM short chorusBuffer[CHORUS_BUFFER_SIZE]; // Memory allocation for chorus buffer
 
 //waveshape for distortion effects
 static const int WAVESHAPE_SIZE = 129;
@@ -349,64 +347,67 @@ float peak1raw, peak2raw, peak3raw, peak4raw, peak5raw, peak6raw,
 float peak1val, peak2val, peak3val, peak4val, peak5val, peak6val,
   peak7val, peak8val, peak9val, peak10val, peak11val, peak12val;
 
-
 // performance test
 elapsedMillis serialtimer;
 
 // Setup routine
 void setup() { 
+  // Serial communication setup
   Serial.begin(115200);
+
+  // Audio memory allocation
   AudioMemory(64);
+
+  // MIDI setup
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
-  // enable Audio Shield
+  // Audio Shield configuration
   sgtl5000_1.enable();
   sgtl5000_1.volume(0.7);
   sgtl5000_1.adcHighPassFilterDisable();
   
-  // enable Mixer Gain
-  setMixer(sourceMixer, 0, 0, 0, 0); // KNOB CONTROL (4)
-  setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7); // DEFAULT
-  setMixer(carrierMixer, 0, 1, 0, 0); // DEFAULT
-  setMixer(vocoderOut, 0.3, 0.3, 0.3, 0); // DEFAULT
-  setMixer(delayBus, 0, 0, 0, 0); // GUI
-  setMixer(distortionBus, 0, 0, 0, 0); // GUI
-  setMixer(masterMixer, 0, 0, 0, 0); // KNOB CONTROL (2)
-  outputVolumeControl.gain(0); // KNOB CONTROL (1)
+  // Mixer gain configurations
+  setMixer(sourceMixer, 0, 0, 0, 0); // Control via knob (4 controls)
+  setMixer(synthMixer, 0.7, 0.7, 0.7, 0.7); // Default settings
+  setMixer(carrierMixer, 0, 1, 0, 0); // Default settings
+  setMixer(vocoderOut, 0.3, 0.3, 0.3, 0); // Default settings
+  setMixer(delayBus, 0, 0, 0, 0); // Controlled via GUI
+  setMixer(distortionBus, 0, 0, 0, 0); // Controlled via GUI
+  setMixer(masterMixer, 0, 0, 0, 0); // Control via knob (2 controls)
+  outputVolumeControl.gain(0); // Control via knob (1 control)
 
-  // initialize vocoder
+  // Vocoder initialization
   modulatorGain.gain(1);
   Vocoderinit();
 
-  //autotune
-  autotuneFilter.setLowpass(0, 3400, 0.707); // Butterworth filter, 12 db/octave
-  notefreq.begin(.15); // Initialize Yin Algorithm Absolute Threshold (15% is a good number)
+  // Autotune setup
+  autotuneFilter.setLowpass(0, 3400, 0.707); // Butterworth filter configuration
+  notefreq.begin(0.15); // Initialize Yin Algorithm with a 15% threshold
   autotuner.currFrequency = 20;
   autotuner.manualPitchOffset = 0;
 
-  // initialize effects
+  // Initialize audio effects
   flange1.begin(flangeBuffer, FLANGE_BUFFER_SIZE, 100, 100, 100);
   chorus1.begin(chorusBuffer, CHORUS_BUFFER_SIZE, 4);
-
   bitcrusher1.bits(6);
   bitcrusher1.sampleRate(26000);
   distortion.shape(distortion1, WAVESHAPE_SIZE);
   limiter.shape(limiter1, WAVESHAPE_SIZE);
 
-  // Set up waveforms and mixer
+  // Configure waveforms and mixer
   for (int i = 0; i < numVoices; i++) {
     waveform[i].begin(WAVEFORM_SAWTOOTH);
     waveform[i].amplitude(0);
-    envelope[i].attack(10); // Attack time in milliseconds
-    envelope[i].decay(100); // Decay time
-    envelope[i].sustain(0.5); // Sustain level
-    envelope[i].release(300); // Release time
-    
+    envelope[i].attack(10); // Set attack time in milliseconds
+    envelope[i].decay(100); // Set decay time
+    envelope[i].sustain(0.5); // Set sustain level
+    envelope[i].release(300); // Set release time
+
     patchCordsWav[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
     patchCordsEnv[i] = new AudioConnection(envelope[i], 0, synthMixer, i);
   } 
-
-  AudioProcessorUsageMaxReset();                                // and reset these things
+  // Reset audio processor and memory usage statistics
+  AudioProcessorUsageMaxReset();                                
   AudioMemoryUsageMaxReset();
   filter1.processorUsageMaxReset();
   autotuner.processorUsageMaxReset();
@@ -419,7 +420,6 @@ void loop() {
   readAndApplySerialCommands();
   // Read control from MIDI Signal
   readAndApplyMIDIControl();
-
   vocoderLoop();
   autotuneLoop();
 
@@ -441,18 +441,14 @@ void loop() {
   }
 }
 
-// Read and apply serial commands
 void readAndApplySerialCommands() {
   if (Serial.available() > 0) {
-    // Read the incoming command
     char commandBuffer[10];
     readSerialCommand(commandBuffer, sizeof(commandBuffer));
-
-    // Parse and apply the command
     applySerialCommand(commandBuffer);
   }
 }
-// Read serial command into buffer
+
 void readSerialCommand(char *buffer, size_t bufferSize) {
   size_t index = 0;
   while (index < bufferSize - 1 && Serial.available()) {
@@ -460,9 +456,10 @@ void readSerialCommand(char *buffer, size_t bufferSize) {
     if (c == '\n') break;
     buffer[index++] = c;
   }
-  buffer[index] = '\0'; // Null-terminate the string
+  buffer[index] = '\0'; 
 }
-// Parse and apply the command
+
+
 void applySerialCommand(const char *command) {
   switch (command[0]) {
     case 'm': setMixerGain(sourceMixer, 0, command + 1); break; //dry microphone gain
@@ -498,9 +495,7 @@ void applySerialCommand(const char *command) {
   }
 }
 
-// Read and apply MIDI control input
 void readAndApplyMIDIControl() {
-  // read MIDI signal
     // Channel 0 = Keys, Knobs
     if(usbMIDI.read(0)) {
       int arg1 = usbMIDI.getData1();
@@ -645,10 +640,9 @@ void Vocoderinit(){
   setMixer(vocoderMixer3, 0, 0, 0, 0);
 }
 
-// vocoder code in main loop
 void vocoderLoop() {
   AudioNoInterrupts();
-    // store peak values at each read
+  // store peak values at each read
   if(peak1.available()) {peak1raw = peak1.read();}
   if(peak2.available()) {peak2raw = peak2.read();}
   if(peak3.available()) {peak3raw = peak3.read();}
@@ -699,7 +693,6 @@ void autotuneLoop() {
     }
 }
 
-// set envelope
 void setEnvelope(float peakRaw, float& peakVal, AudioMixer4& mixer, int channel){
   if((peakRaw * threshold) > peakVal) {
     peakVal = peakVal / attack;
@@ -713,7 +706,6 @@ void setEnvelope(float peakRaw, float& peakVal, AudioMixer4& mixer, int channel)
   }
 }
 
-//set waveforms for synthesizer
 void setWaveformsSine(){
   for (int i = 0; i < numVoices; i++) {
     waveform[i].begin(WAVEFORM_SINE);
@@ -759,12 +751,11 @@ void setWaveformsTri(){
 }
 
 
-// Set mixer gain
 void setMixerGain(AudioMixer4& mixer, uint8_t channel, const char *gainStr) {
   float gainValue = atof(gainStr);
   mixer.gain(channel, gainValue);
 }
-//edits a mixer to set gain of each channel
+
 void setMixer(AudioMixer4& mixer, float c0, float c1, float c2, float c3){
     mixer.gain(0, c0);
     mixer.gain(1, c1);
@@ -828,7 +819,7 @@ void noteOff(uint8_t note) {
       waveform[i].amplitude(0);
       envelope[i].noteOff();
       voiceUsed[i] = false;
-      voiceNote[i] = -1; // Reset the note number for this voice
+      voice Note[i] = -1; // Reset the note number for this voice
     }
   }
 }
