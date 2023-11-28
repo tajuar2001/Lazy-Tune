@@ -575,7 +575,7 @@ void readAndApplyMIDIControl() {
       }
       case midi::PitchBend: // PITCH STICK
       {
-        int pitchValue = arg1; // The amount of bend to send (in a signed integer format), between MIDI_PITCHBEND_MIN and MIDI_PITCHBEND_MAX, center value is 0.
+        int pitchValue = arg1;
         Serial.print(pitchValue);
         break;
       }
@@ -642,7 +642,6 @@ void Vocoderinit(){
 
 void vocoderLoop() {
   AudioNoInterrupts();
-  // store peak values at each read
   if(peak1.available()) {peak1raw = peak1.read();}
   if(peak2.available()) {peak2raw = peak2.read();}
   if(peak3.available()) {peak3raw = peak3.read();}
@@ -721,10 +720,10 @@ void setWaveformsSaw(){
   for (int i = 0; i < numVoices; i++) {
     waveform[i].begin(WAVEFORM_SAWTOOTH);
     waveform[i].amplitude(0);
-    envelope[i].attack(10); // Attack time in milliseconds
-    envelope[i].decay(100); // Decay time
-    envelope[i].sustain(0.5); // Sustain level
-    envelope[i].release(300); // Release time
+    envelope[i].attack(10); 
+    envelope[i].decay(100); 
+    envelope[i].sustain(0.5); 
+    envelope[i].release(300); 
   } 
 }
 
@@ -732,10 +731,10 @@ void setWaveformsSquare(){
   for (int i = 0; i < numVoices; i++) {
     waveform[i].begin(WAVEFORM_SQUARE);
     waveform[i].amplitude(0);
-    envelope[i].attack(70); // Attack time in milliseconds
-    envelope[i].decay(200); // Decay time
-    envelope[i].sustain(0.7); // Sustain level
-    envelope[i].release(300); // Release time
+    envelope[i].attack(70); 
+    envelope[i].decay(200); 
+    envelope[i].sustain(0.7);
+    envelope[i].release(300); 
   } 
 }
 
@@ -743,13 +742,12 @@ void setWaveformsTri(){
   for (int i = 0; i < numVoices; i++) {
     waveform[i].begin(WAVEFORM_TRIANGLE);
     waveform[i].amplitude(0);
-    envelope[i].attack(25); // Attack time in milliseconds
-    envelope[i].decay(100); // Decay time
-    envelope[i].sustain(0.5); // Sustain level
-    envelope[i].release(300); // Release time
+    envelope[i].attack(25); 
+    envelope[i].decay(100); 
+    envelope[i].sustain(0.5); 
+    envelope[i].release(300); 
   } 
 }
-
 
 void setMixerGain(AudioMixer4& mixer, uint8_t channel, const char *gainStr) {
   float gainValue = atof(gainStr);
@@ -799,7 +797,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
     waveform[freeVoice].amplitude(velocity / 127.0);
     envelope[freeVoice].noteOn();
     voiceUsed[freeVoice] = true;
-    voiceNote[freeVoice] = note; // Store the note number that this voice is now playing
+    voiceNote[freeVoice] = note; 
     voiceStartTime[freeVoice] = millis();
   } else { // replace with an existing voice
     float frequency = noteToFrequency(note);
@@ -807,19 +805,19 @@ void noteOn(uint8_t note, uint8_t velocity) {
     waveform[oldestVoice].amplitude(velocity / 127.0);
     envelope[oldestVoice].noteOn();
     voiceUsed[oldestVoice] = true;
-    voiceNote[oldestVoice] = note; // Store the note number that this voice is now playing
+    voiceNote[oldestVoice] = note; 
     voiceStartTime[oldestVoice] = millis();
   }
 }
 
 void noteOff(uint8_t note) {
   for (int i = 0; i < numVoices; i++) {
-    if (voiceUsed[i] && voiceNote[i] == note) { // Check if this voice is playing the note
+    if (voiceUsed[i] && voiceNote[i] == note) { 
       waveform[i].frequency(0);
       waveform[i].amplitude(0);
       envelope[i].noteOff();
       voiceUsed[i] = false;
-      voice Note[i] = -1; // Reset the note number for this voice
+      voice Note[i] = -1; 
     }
   }
 }
@@ -828,7 +826,6 @@ float noteToFrequency(uint8_t note) {
   return 440.0 * pow(2.0, (note - 69) / 12.0);
 }
 
-// convert a knob value from range 0, 127 to a range lower_bound, upper_bound
 float convertKnob(float knob_value, float lower_bound, float upper_bound) {
   return lower_bound + ((knob_value - 0) / static_cast<float>(127 - 0)) * (upper_bound - lower_bound);
   // autotuner.manualPitchOffset = AUTOTUNE_MIN_PS + ((controlVal - 0) / static_cast<float>(127 - 0)) * (AUTOTUNE_MAX_PS - AUTOTUNE_MIN_PS);
