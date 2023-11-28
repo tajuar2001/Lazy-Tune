@@ -27,6 +27,10 @@ DMAMEM short flangeBuffer[FLANGE_BUFFER_SIZE];
 static const int CHORUS_BUFFER_SIZE = 512; 
 DMAMEM short chorusBuffer[CHORUS_BUFFER_SIZE]; 
 
+float FLANGE_OFFSET = 100;
+float FLANGE_DEPTH  = 100;
+float FLANGE_DELAY  = 100;
+
 AudioInputI2S            inputAudio;  
 
 // Vocoder
@@ -113,7 +117,7 @@ CustomAutoTune autotuner;
 
 AudioMixer4              sourceMixer;       
 
-AudioEffectReverb        reverb1;        
+AudioEffectReverb        delay1;        
 AudioEffectFlange        flange1;        
 AudioEffectFreeverb      freeverb1;      
 AudioEffectChorus        chorus1;        
@@ -242,7 +246,7 @@ AudioConnection patchCords[108] = {
   AudioConnection(inputAudio, 0, sourceMixer, 0),
 
   // delayBus Input
-  AudioConnection(sourceMixer, reverb1),
+  AudioConnection(sourceMixer, delay1),
   AudioConnection(sourceMixer, flange1),
   AudioConnection(sourceMixer, freeverb1),
   AudioConnection(sourceMixer, chorus1),
@@ -255,7 +259,7 @@ AudioConnection patchCords[108] = {
   AudioConnection(sourceMixer, 0, masterMixer, 0),
 
   // delayBus
-  AudioConnection(reverb1, 0, delayBus, 0),
+  AudioConnection(delay1, 0, delayBus, 0),
   AudioConnection(flange1, 0, delayBus, 1),
   AudioConnection(freeverb1, 0, delayBus, 2),
   AudioConnection(chorus1, 0, delayBus, 3),
@@ -483,7 +487,17 @@ void applySerialCommand(const char *command) {
 
     case 'S': threshold = atof(command + 1); break;                  // change threshold value for vocoder
     case 'C': carrierMixToggle(); break;                             // toggle between input channel 2 or synthMixer
-    case 'R': freeverb1.roomsize(atof(command + 1)); break;          // attempt to change roomsize
+
+    // TODO: delay - reverb time, flange offset, flange depth, flange delayrate, reverb damping, chorus, bit depth, bit freq
+    case 'R': freeverb1.roomsize(atof(command + 1)); break;          // freeverb roomsize
+    case 'D': delay1.reverbTime(atof(command + 1)); break;           // delay time
+    case 'F': FLANGE_OFFSET = atof(command + 1); flange1.voices(FLANGE_OFFSET, FLANGE_DEPTH, FLANGE_DELAY); break;
+    case 'L': FLANGE_DEPTH =  atof(command + 1); flange1.voices(FLANGE_OFFSET, FLANGE_DEPTH, FLANGE_DELAY); break;
+    case 'Y': FLANGE_DELAY =  atof(command + 1); flange1.voices(FLANGE_OFFSET, FLANGE_DEPTH, FLANGE_DELAY); break;
+    case 'V': freeverb1.damping(atof(command + 1)); break;           // freeverb damping
+    case 'H': chorus1.voices(atof(command + 1)); break;              // chorus voices
+    case 'B': bitcrusher1.bits(atof(command + 1)); break;            // bit depth
+    case 'M': bitcrusher1.sampleRate(atof(command + 1)); break;      // bit frequency
 
     case 'I': setWaveformsSine(); break; 
     case 'A': setWaveformsSaw(); break;
