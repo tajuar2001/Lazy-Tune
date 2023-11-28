@@ -10,6 +10,7 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 #define AUDIO_GUITARTUNER_BLOCKS  12 // redefinition of notefreq parameter to reduce latency
 
 AudioInputI2S            inputAudio;           //xy=140,143
+AudioPlaySdWav           playWav1;         // SD Card Player
 // -------------------------------------------------------
 // Vocoder
 AudioAmplifier           modulatorGain;
@@ -109,7 +110,10 @@ AudioOutputI2S           finalOutputAudio;           //xy=1158,836
 
 AudioControlSGTL5000 sgtl5000_1;
 
-AudioConnection patchCords[108] = {
+AudioConnection patchCords[110] = {
+  // sd card
+  AudioConnection(playWav1, 0, outputVolumeControl, 0),
+  AudioConnection(playWav1, 0, outputVolumeControl, 1),
 
   // autotune
   AudioConnection(inputAudio, 0, autotuneFilter, 0),
@@ -338,6 +342,11 @@ float peak1raw, peak2raw, peak3raw, peak4raw, peak5raw, peak6raw,
 float peak1val, peak2val, peak3val, peak4val, peak5val, peak6val,
   peak7val, peak8val, peak9val, peak10val, peak11val, peak12val;
 
+// Use these with the Teensy Audio Shield
+#define SDCARD_CS_PIN    10
+#define SDCARD_MOSI_PIN  7   // Teensy 4 ignores this, uses pin 11
+#define SDCARD_SCK_PIN   14  // Teensy 4 ignores this, uses pin 13
+
 // performance test
 elapsedMillis serialtimer;
 
@@ -395,6 +404,9 @@ void setup() {
     patchCordsWav[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
     patchCordsEnv[i] = new AudioConnection(envelope[i], 0, synthMixer, i);
   } 
+
+  // initialize SD Card
+  SDcardInit();
 
   AudioProcessorUsageMaxReset();                                // and reset these things
   AudioMemoryUsageMaxReset();
@@ -487,13 +499,12 @@ void applySerialCommand(const char *command) {
 void readAndApplyMIDIControl() {
   // read MIDI signal
     // Channel 0 = Keys, Knobs
-    if(usbMIDI.read(0)) {
-      int arg1 = usbMIDI.getData1();
-
+    if(usbMIDI.read()) {
       switch (usbMIDI.getType()) {
       case midi::NoteOn: // KEY_PRESS
       {
-        int keyNote = arg1; // integer 48 to 72 on the keyboard
+        if(usbMIDI.getChannel() == 0) {
+          int keyNote = usbMIDI.getData1(); // integer 48 to 72 on the keyboard
         int keyVelocity = usbMIDI.getData2(); // 0 to 100
         Serial.println("note ON");
         if (keyNote == 72) {
@@ -516,12 +527,13 @@ void readAndApplyMIDIControl() {
         }
         Serial.print("note");
         Serial.println(keyNote);
+        }
 
         break;
       }
       case midi::NoteOff: // KEY_RELEASE
       {// same as NoteOn
-        int keyNote = arg1; // integer 48 to 72 on the keyboard
+        int keyNote = usbMIDI.getData1(); // integer 48 to 72 on the keyboard
         Serial.println("note OFF");
         Serial.print("note");
         Serial.println(keyNote);
@@ -530,7 +542,7 @@ void readAndApplyMIDIControl() {
       }
       case midi::ControlChange: // KNOBS
       {
-        int controlNum = arg1; // integer 1 to 8 (the knob number)
+        int controlNum = usbMIDI.getData1(); // integer 1 to 8 (the knob number)
         int controlVal = usbMIDI.getData2(); // integer 0 to 127
 
         if(controlNum == 1) { // MASTER_VOLUME
@@ -565,7 +577,7 @@ void readAndApplyMIDIControl() {
       }
       case midi::PitchBend: // PITCH STICK
       {
-        int pitchValue = arg1; // The amount of bend to send (in a signed integer format), between MIDI_PITCHBEND_MIN and MIDI_PITCHBEND_MAX, center value is 0.
+        int pitchValue = usbMIDI.getData1(); // The amount of bend to send (in a signed integer format), between MIDI_PITCHBEND_MIN and MIDI_PITCHBEND_MAX, center value is 0.
         Serial.print(pitchValue);
         break;
       }
@@ -578,9 +590,37 @@ void readAndApplyMIDIControl() {
       {
         int pad_note = usbMIDI.getData1(); // integer 48 to 55
         int pad_velocity = usbMIDI.getData2(); // 0 to 100
+
+        if(usbMIDI.getChannel() == 1) {
+          if(pad_note == 48) {
+          playFile("DRUM1.WAV");
+        }
+        if(pad_note == 49) {
+          playFile("DRUM2.WAV");
+        }
+        if(pad_note == 50) {
+          playFile("DRUM3.WAV");
+        }
+        if(pad_note == 51) {
+          playFile("DRUM4.WAV");
+        }
+        if(pad_note == 52) {
+          playFile("DRUM5.WAV");
+        }
+        if(pad_note == 53) {
+          playFile("DRUM6.WAV");
+        }
+        if(pad_note == 54) {
+          playFile("DRUM7.WAV");
+        }
+        if(pad_note == 55) {
+          playFile("DRUM8.WAV");
+        }
         Serial.print(pad_note);
         Serial.print(pad_velocity);
-        break;}
+        }
+        break;
+      }
       case midi::NoteOff: // PAD_RELEASE
         {// same as NoteOn
         break;}
@@ -684,6 +724,20 @@ void autotuneLoop() {
     }
 }
 
+// SD card init
+void SDcardInit() {
+  // SD Card Setup
+    SPI.setMOSI(SDCARD_MOSI_PIN);
+    SPI.setSCK(SDCARD_SCK_PIN);
+    if (!(SD.begin(SDCARD_CS_PIN))) {
+      // stop here, but print a message repetitively
+      while (1) {
+        Serial.println("Unable to access the SD card");
+        delay(500);
+      }
+    }
+}
+
 // set envelope
 void setEnvelope(float peakRaw, float& peakVal, AudioMixer4& mixer, int channel){
   if((peakRaw * threshold) > peakVal) {
@@ -780,4 +834,26 @@ float noteToFrequency(uint8_t note) {
 float convertKnob(float knob_value, float lower_bound, float upper_bound) {
   return lower_bound + ((knob_value - 0) / static_cast<float>(127 - 0)) * (upper_bound - lower_bound);
   // autotuner.manualPitchOffset = AUTOTUNE_MIN_PS + ((controlVal - 0) / static_cast<float>(127 - 0)) * (AUTOTUNE_MAX_PS - AUTOTUNE_MIN_PS);
+}
+
+void playFile(const char *filename)
+{
+  Serial.print("Playing file: ");
+  Serial.println(filename);
+
+  // Start playing the file.  This sketch continues to
+  // run while the file plays.
+  playWav1.play(filename);
+
+  // A brief delay for the library read WAV info
+  delay(5);
+
+  // Simply wait for the file to finish playing.
+  while (playWav1.isPlaying()) {
+    // uncomment these lines if you audio shield
+    // has the optional volume pot soldered
+    //float vol = analogRead(15);
+    //vol = vol / 1024;
+    // sgtl5000_1.volume(vol);
+  }
 }
