@@ -32,6 +32,7 @@ float FLANGE_DEPTH  = 100;
 float FLANGE_DELAY  = 100;
 
 AudioInputI2S            inputAudio;  
+AudioPlaySdWav           playWav1;
 
 // Vocoder
 AudioAmplifier           modulatorGain;
@@ -130,12 +131,19 @@ AudioEffectMultiply      multiply1;
 AudioMixer4              distortionBus;      
 
 AudioMixer4              masterMixer;        
+AudioAmplifier           drumVolumeControl;
+AudioMixer4              drumAndMaster;  
 AudioAmplifier           outputVolumeControl;          
 AudioOutputI2S           finalOutputAudio;       
 
 AudioControlSGTL5000 sgtl5000_1;
 
-AudioConnection patchCords[108] = {
+AudioConnection patchCords[114] = {
+  // sd card
+  AudioConnection(playWav1, 0, drumVolumeControl, 0),
+  AudioConnection(playWav1, 0, drumVolumeControl, 1),
+  AudioConnection(drumVolumeControl, 0, drumAndMaster, 2),
+  AudioConnection(drumVolumeControl, 1, drumAndMaster, 3),
 
   // autotune
   AudioConnection(inputAudio, 0, autotuneFilter, 0),
@@ -273,7 +281,9 @@ AudioConnection patchCords[108] = {
   AudioConnection(distortionBus, 0, masterMixer, 2),
 
   // Output
-  AudioConnection(masterMixer, outputVolumeControl),
+  AudioConnection(masterMixer, 0, drumAndMaster, 0),
+  AudioConnection(masterMixer, 1, drumAndMaster, 1),
+  AudioConnection(drumAndMaster, outputVolumeControl),
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 0),
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 1),
   
@@ -352,6 +362,11 @@ float peak1raw, peak2raw, peak3raw, peak4raw, peak5raw, peak6raw,
 float peak1val, peak2val, peak3val, peak4val, peak5val, peak6val,
   peak7val, peak8val, peak9val, peak10val, peak11val, peak12val;
 
+// Use these with the Teensy Audio Shield
+#define SDCARD_CS_PIN    10
+#define SDCARD_MOSI_PIN  7   // Teensy 4 ignores this, uses pin 11
+#define SDCARD_SCK_PIN   14  // Teensy 4 ignores this, uses pin 13
+
 // performance test
 elapsedMillis serialtimer;
 
@@ -379,7 +394,9 @@ void setup() {
   setMixer(delayBus, 0, 0, 0, 0); // Controlled via GUI
   setMixer(distortionBus, 0, 0, 0, 0); // Controlled via GUI
   setMixer(masterMixer, 0, 0, 0, 0); // Control via knob (2 controls)
+  setMixer(drumAndMaster, 1, 1, 1, 1); // Default settings
   outputVolumeControl.gain(0); // Control via knob (1 control)
+  drumVolumeControl.gain(0.1); // Default settings
 
   // Vocoder initialization
   modulatorGain.gain(1);
@@ -411,6 +428,10 @@ void setup() {
     patchCordsWav[i] = new AudioConnection(waveform[i], 0, envelope[i], 0);
     patchCordsEnv[i] = new AudioConnection(envelope[i], 0, synthMixer, i);
   } 
+
+  // initialize SD Card
+  SDcardInit();
+
   // Reset audio processor and memory usage statistics
   AudioProcessorUsageMaxReset();                                
   AudioMemoryUsageMaxReset();
@@ -508,46 +529,74 @@ void applySerialCommand(const char *command) {
 }
 
 void readAndApplyMIDIControl() {
-    // Channel 0 = Keys, Knobs
     if(usbMIDI.read()) {
       int arg1 = usbMIDI.getData1();
 
       switch (usbMIDI.getType()) {
       case midi::NoteOn: 
       {
-        int keyNote = arg1; // integer 48 to 72 on the keyboard
-        int keyVelocity = usbMIDI.getData2(); // 0 to 100
-        Serial.println("note ON");
-        if(keyVelocity > 0) {
-          noteOn(keyNote, keyVelocity);
-        } else {
-          noteOff(keyNote);
-        }
-        Serial.print("note");
-        Serial.println(keyNote);
-
-        break;
-      }
-      case midi::NoteOff: // KEY_RELEASE
-      {// same as NoteOn
-      int keyNote = arg1; // integer 48 to 72 on the keyboard
-        if (keyNote == 72) {
-              // reset all synth keys
-              for (int i = 0; i < numVoices; i++) {
-                waveform[i].frequency(0);
-                waveform[i].amplitude(0);
-                envelope[i].noteOff();
-                voiceUsed[i] = false;
-                voiceNote[i] = -1; // Reset the note number for this voice
-              }
-              // reset autotune manualPitchOffset
-              autotuner.manualPitchOffset = 0;
-        } else {
-          
-          Serial.println("note OFF");
+        int keyNote = arg1;
+        if (keyNote >= 48) { // keys 48 to 72
+          int keyVelocity = usbMIDI.getData2(); // 0 to 100
+          Serial.println("note ON");
+          if(keyVelocity > 0) {
+            noteOn(keyNote, keyVelocity);
+          } else {
+            noteOff(keyNote);
+          }
           Serial.print("note");
           Serial.println(keyNote);
-          noteOff(keyNote);
+        } else { // pads 32 to 39
+          int pad_note = arg1;
+          if(pad_note == 32) {
+            playFile("DRUM1.WAV");
+          }
+          if(pad_note == 33) {
+            playFile("DRUM2.WAV");
+          }
+          if(pad_note == 34) {
+            playFile("DRUM3.WAV");
+          }
+          if(pad_note == 35) {
+            playFile("DRUM4.WAV");
+          }
+          if(pad_note == 36) {
+            playFile("DRUM5.WAV");
+          }
+          if(pad_note == 37) {
+            playFile("DRUM6.WAV");
+          }
+          if(pad_note == 38) {
+            playFile("DRUM7.WAV");
+          }
+          if(pad_note == 39) {
+            playFile("DRUM8.WAV");
+          }
+        }
+        break;
+      }
+      case midi::NoteOff:
+      {// same as NoteOn
+        int keyNote = arg1;
+        if (keyNote >= 48) { // keys integer 48 to 72 on the keyboard
+          if (keyNote == 72) {
+                // reset all synth keys
+                for (int i = 0; i < numVoices; i++) {
+                  waveform[i].frequency(0);
+                  waveform[i].amplitude(0);
+                  envelope[i].noteOff();
+                  voiceUsed[i] = false;
+                  voiceNote[i] = -1; // Reset the note number for this voice
+                }
+                // reset autotune manualPitchOffset
+                autotuner.manualPitchOffset = 0;
+          } else {
+            
+            Serial.println("note OFF");
+            Serial.print("note");
+            Serial.println(keyNote);
+            noteOff(keyNote);
+          }
         }
         break;
       }
@@ -803,4 +852,28 @@ float noteToFrequency(uint8_t note) {
 
 float convertKnob(float knob_value, float lower_bound, float upper_bound) {
   return lower_bound + ((knob_value - 0) / static_cast<float>(127 - 0)) * (upper_bound - lower_bound);
+}
+
+// SD card init
+void SDcardInit() {
+  // SD Card Setup
+    SPI.setMOSI(SDCARD_MOSI_PIN);
+    SPI.setSCK(SDCARD_SCK_PIN);
+    if (!(SD.begin(SDCARD_CS_PIN))) {
+      // stop here, but print a message repetitively
+      while (1) {
+        Serial.println("Unable to access the SD card");
+        delay(500);
+      }
+    }
+}
+
+void playFile(const char *filename)
+{
+  Serial.print("Playing file: ");
+  Serial.println(filename);
+  playWav1.play(filename);
+
+  // // A brief delay for the library read WAV info
+  // delay(5);
 }
