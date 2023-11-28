@@ -9,6 +9,24 @@
 MIDI_CREATE_DEFAULT_INSTANCE();
 #define AUDIO_GUITARTUNER_BLOCKS  12 // redefinition of notefreq parameter to reduce latency
 
+// Polyphony Configuration
+const int numVoices = 4; 
+int voiceNote[numVoices] = {0}; 
+bool voiceUsed[numVoices] = {false}; 
+unsigned long voiceStartTime[numVoices] = {0}; 
+
+// Audio Components for Synthesis
+AudioSynthWaveform waveform[numVoices]; 
+AudioEffectEnvelope envelope[numVoices];
+AudioConnection *patchCordsWav[numVoices];
+AudioConnection *patchCordsEnv[numVoices];
+
+// Effect Buffers
+static const int FLANGE_BUFFER_SIZE = 512;
+DMAMEM short flangeBuffer[FLANGE_BUFFER_SIZE];
+static const int CHORUS_BUFFER_SIZE = 512; 
+DMAMEM short chorusBuffer[CHORUS_BUFFER_SIZE]; 
+
 AudioInputI2S            inputAudio;  
 
 // Vocoder
@@ -89,10 +107,11 @@ AudioFilterStateVariable filter48;
 // --------------------------------------------------------------------------------------------
 // autotune
 AudioAnalyzeNoteFrequency notefreq;        // frequency detector
-AudioFilterBiquad        autotuneFilter;          // filter (biquad, easy lowpass filter)    
+AudioFilterBiquad        autotuneFilter;   // filter (biquad, easy lowpass filter)    
 CustomAutoTune autotuner;
 // --------------------------------------------------------------------------------------------
-AudioMixer4              sourceMixer;         //xy=760,144
+
+AudioMixer4              sourceMixer;       
 
 AudioEffectReverb        reverb1;        
 AudioEffectFlange        flange1;        
@@ -253,25 +272,9 @@ AudioConnection patchCords[108] = {
   AudioConnection(masterMixer, outputVolumeControl),
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 0),
   AudioConnection(outputVolumeControl, 0, finalOutputAudio, 1),
+  
 };
 
-// Polyphony Configuration
-const int numVoices = 4; // Total number of polyphonic voices
-int voiceNote[numVoices] = {0}; // Array to store note values for each voice
-bool voiceUsed[numVoices] = {false}; // Array to track if a voice is currently in use
-unsigned long voiceStartTime[numVoices] = {0}; // Array to store start time of each voice for timing control
-
-// Audio Components for Synthesis
-AudioSynthWaveform waveform[numVoices]; // Array of waveform objects for polyphonic synthesis
-AudioEffectEnvelope envelope[numVoices]; // Envelope effect for each voice
-AudioConnection *patchCordsWav[numVoices]; // Array of audio connections for waveforms
-AudioConnection *patchCordsEnv[numVoices]; // Array of audio connections for envelopes
-
-// Effect Buffers
-static const int FLANGE_BUFFER_SIZE = 512; // Size of the buffer for flanger effect
-DMAMEM short flangeBuffer[FLANGE_BUFFER_SIZE]; // Memory allocation for flanger buffer
-static const int CHORUS_BUFFER_SIZE = 512; // Size of the buffer for chorus effect
-DMAMEM short chorusBuffer[CHORUS_BUFFER_SIZE]; // Memory allocation for chorus buffer
 
 //waveshape for distortion effects
 static const int WAVESHAPE_SIZE = 129;
@@ -297,13 +300,11 @@ float distortion1[WAVESHAPE_SIZE] = {-1, -0.9999,-0.9996,-0.99911,-0.99841,-0.99
                     0.9879,0.99001,0.99192,0.99362,0.99512,0.99642,0.99751,0.99841,0.99911,0.9996,0.9999,1};
 
 // values for vocoder
-const float res = 5;                                            // this is used as resonance value of all state variable filters
-const float attack = 0.995884;                                   // controls attack and decay, must not exceed or equal 1,
-                                                                // going near 1 decreases attack, must be set at a right value to minimize distortion,
-                                                                // while still responsive to voice, this parameter is CPU speed dependent
-float threshold = 0.5;                                    // threshold value used to limit sound levels going to mixer used as amplitude
-                                                                // modulators
-const float freq[37] = {                                        // filter frequency table, tuned to specified musical notes
+const float res = 5;                   // Resonance value for all state variable filters
+const float attack = 0.995884;         // Attack/decay control; should be < 1 for minimal distortion and CPU-dependent responsiveness
+float threshold = 0.5;                 // Amplitude threshold for mixer input level
+
+const float freq[37] = {                                        
   110.0000000,  // A2   freq[0]
   123.4708253,  // B2   freq[1]
   138.5913155,  // C#3  freq[2]
@@ -414,16 +415,13 @@ void setup() {
   serialtimer = 0;                        
 }
 
-// Loop routine
 void loop() {
-  // Read commands from Serial
   readAndApplySerialCommands();
-  // Read control from MIDI Signal
   readAndApplyMIDIControl();
   vocoderLoop();
   autotuneLoop();
 
-  if(serialtimer >= 100) {                                      // and report MCU usage 10x per second
+  if(serialtimer >= 100) {                                      
     serialtimer = 0;
     Serial.print("Processor Usage: ");
     Serial.print(AudioProcessorUsage());
@@ -462,32 +460,32 @@ void readSerialCommand(char *buffer, size_t bufferSize) {
 
 void applySerialCommand(const char *command) {
   switch (command[0]) {
-    case 'm': setMixerGain(sourceMixer, 0, command + 1); break; //dry microphone gain
-    case 'c': setMixerGain(sourceMixer, 3, command + 1); break; //dry carrier signal gain
-    case 'a': setMixerGain(sourceMixer, 1, command + 1); break; //autotune gain
-    case 'v': setMixerGain(sourceMixer, 2, command + 1); break; //vocoder gain
+    case 'm': setMixerGain(sourceMixer, 0, command + 1); break;       //dry microphone gain
+    case 'c': setMixerGain(sourceMixer, 3, command + 1); break;       //dry carrier signal gain
+    case 'a': setMixerGain(sourceMixer, 1, command + 1); break;       //autotune gain
+    case 'v': setMixerGain(sourceMixer, 2, command + 1); break;       //vocoder gain
 
-    case 'r': setMixerGain(delayBus, 0, command + 1); break; // reverb gain
-    case 'f': setMixerGain(delayBus, 1, command + 1); break; // flanger gain
-    case 'e': setMixerGain(delayBus, 2, command + 1); break; // freeverb gain
-    case 'h': setMixerGain(delayBus, 3, command + 1); break; // chorus gain
+    case 'r': setMixerGain(delayBus, 0, command + 1); break;          // reverb gain
+    case 'f': setMixerGain(delayBus, 1, command + 1); break;          // flanger gain
+    case 'e': setMixerGain(delayBus, 2, command + 1); break;          // freeverb gain
+    case 'h': setMixerGain(delayBus, 3, command + 1); break;          // chorus gain
 
-    case 'b': setMixerGain(distortionBus, 0, command + 1); break; // bitcrusher gain
-    case 't': setMixerGain(distortionBus, 1, command + 1); break; // distortion gain
-    case 'l': setMixerGain(distortionBus, 2, command + 1); break; // limiter gain
-    case 'u': setMixerGain(distortionBus, 3, command + 1); break; // multiplier gain
+    case 'b': setMixerGain(distortionBus, 0, command + 1); break;     // bitcrusher gain
+    case 't': setMixerGain(distortionBus, 1, command + 1); break;     // distortion gain
+    case 'l': setMixerGain(distortionBus, 2, command + 1); break;     // limiter gain
+    case 'u': setMixerGain(distortionBus, 3, command + 1); break;     // multiplier gain
 
-    case 's': setMixerGain(masterMixer, 0, command + 1); break; //dry source master gain
-    case 'd': setMixerGain(masterMixer, 1, command + 1); break; //delay bus master gain
-    case 'i': setMixerGain(masterMixer, 2, command + 1); break; //distortion bus master gain
+    case 's': setMixerGain(masterMixer, 0, command + 1); break;       //dry source master gain
+    case 'd': setMixerGain(masterMixer, 1, command + 1); break;       //delay bus master gain
+    case 'i': setMixerGain(masterMixer, 2, command + 1); break;       //distortion bus master gain
 
-    case 'o': outputVolumeControl.gain(atof(command + 1)); break; //master volume output
+    case 'o': outputVolumeControl.gain(atof(command + 1)); break;     //master volume output
 
-    case 'S': threshold = atof(command + 1); break; // change threshold value for vocoder
-    case 'C': carrierMixToggle(); break; // toggle between input channel 2 or synthMixer
-    case 'R': freeverb1.roomsize(atof(command + 1)); break; // attempt to change roomsize
+    case 'S': threshold = atof(command + 1); break;                  // change threshold value for vocoder
+    case 'C': carrierMixToggle(); break;                             // toggle between input channel 2 or synthMixer
+    case 'R': freeverb1.roomsize(atof(command + 1)); break;          // attempt to change roomsize
 
-    case 'I': setWaveformsSine(); break; //change waveform type to a sine, saw, square, or triangle wave
+    case 'I': setWaveformsSine(); break; 
     case 'A': setWaveformsSaw(); break;
     case 'T': setWaveformsTri(); break;
     case 'Q': setWaveformsSquare(); break;
@@ -497,32 +495,19 @@ void applySerialCommand(const char *command) {
 
 void readAndApplyMIDIControl() {
     // Channel 0 = Keys, Knobs
-    if(usbMIDI.read(0)) {
+    if(usbMIDI.read()) {
       int arg1 = usbMIDI.getData1();
 
       switch (usbMIDI.getType()) {
-      case midi::NoteOn: // KEY_PRESS
+      case midi::NoteOn: 
       {
         int keyNote = arg1; // integer 48 to 72 on the keyboard
         int keyVelocity = usbMIDI.getData2(); // 0 to 100
         Serial.println("note ON");
-        if (keyNote == 72) {
-            // reset all synth keys
-            for (int i = 0; i < numVoices; i++) {
-              waveform[i].frequency(0);
-              waveform[i].amplitude(0);
-              envelope[i].noteOff();
-              voiceUsed[i] = false;
-              voiceNote[i] = -1; // Reset the note number for this voice
-            }
-            // reset autotune manualPitchOffset
-            autotuner.manualPitchOffset = 0;
+        if(keyVelocity > 0) {
+          noteOn(keyNote, keyVelocity);
         } else {
-          if(keyVelocity > 0) {
-            noteOn(keyNote, keyVelocity);
-          } else {
-            noteOff(keyNote);
-          }
+          noteOff(keyNote);
         }
         Serial.print("note");
         Serial.println(keyNote);
@@ -531,11 +516,25 @@ void readAndApplyMIDIControl() {
       }
       case midi::NoteOff: // KEY_RELEASE
       {// same as NoteOn
-        int keyNote = arg1; // integer 48 to 72 on the keyboard
-        Serial.println("note OFF");
-        Serial.print("note");
-        Serial.println(keyNote);
-        noteOff(keyNote);
+      int keyNote = arg1; // integer 48 to 72 on the keyboard
+        if (keyNote == 72) {
+              // reset all synth keys
+              for (int i = 0; i < numVoices; i++) {
+                waveform[i].frequency(0);
+                waveform[i].amplitude(0);
+                envelope[i].noteOff();
+                voiceUsed[i] = false;
+                voiceNote[i] = -1; // Reset the note number for this voice
+              }
+              // reset autotune manualPitchOffset
+              autotuner.manualPitchOffset = 0;
+        } else {
+          
+          Serial.println("note OFF");
+          Serial.print("note");
+          Serial.println(keyNote);
+          noteOff(keyNote);
+        }
         break;
       }
       case midi::ControlChange: // KNOBS
@@ -568,39 +567,14 @@ void readAndApplyMIDIControl() {
         if(controlNum == 8) { // AUTOTUNE
           sourceMixer.gain(1, convertKnob(controlVal, 0, 2)); 
         }
-        Serial.print(controlNum);
-        Serial.println(controlVal);
-        // do something with these values
-        break;
-      }
-      case midi::PitchBend: // PITCH STICK
-      {
-        int pitchValue = arg1;
-        Serial.print(pitchValue);
         break;
       }
       }
     }
-    // Channel 1 = Pads
-    if(usbMIDI.read(1)) {
-      switch (usbMIDI.getType()) {
-      case midi::NoteOn: // PAD_PRESS
-      {
-        int pad_note = usbMIDI.getData1(); // integer 48 to 55
-        int pad_velocity = usbMIDI.getData2(); // 0 to 100
-        Serial.print(pad_note);
-        Serial.print(pad_velocity);
-        break;}
-      case midi::NoteOff: // PAD_RELEASE
-        {// same as NoteOn
-        break;}
-      }
-    } // end MIDI
 }
 
 // vocoder init
 void Vocoderinit(){
-
   // set the resonance of the filters
   filter1.resonance(res); filter2.resonance(res); filter3.resonance(res); filter4.resonance(res); filter5.resonance(res);
   filter6.resonance(res); filter7.resonance(res); filter8.resonance(res); filter9.resonance(res); filter10.resonance(res);
@@ -613,9 +587,6 @@ void Vocoderinit(){
   filter41.resonance(res); filter42.resonance(res); filter43.resonance(res); filter44.resonance(res); filter45.resonance(res);
   filter46.resonance(res); filter47.resonance(res); filter48.resonance(res);
 
-  // set the frequencies of the filters
-  // pairs of cascaded filters for optimal frequency isolation
-  // two sets of filters are used: for voice signal analysis and instrument/synth filter
   filter1.frequency(freq[0]); filter2.frequency(freq[0]); filter3.frequency(freq[3]); filter4.frequency(freq[3]);
   filter5.frequency(freq[6]); filter6.frequency(freq[6]); filter7.frequency(freq[9]); filter8.frequency(freq[9]);
   filter9.frequency(freq[12]); filter10.frequency(freq[12]); filter11.frequency(freq[15]); filter12.frequency(freq[15]);
@@ -628,8 +599,7 @@ void Vocoderinit(){
   filter37.frequency(freq[18]); filter38.frequency(freq[18]); filter39.frequency(freq[21]); filter40.frequency(freq[21]);
   filter41.frequency(freq[24]); filter42.frequency(freq[24]); filter43.frequency(freq[27]); filter44.frequency(freq[27]);
   filter45.frequency(freq[30]); filter46.frequency(freq[30]); filter47.frequency(freq[33]); filter48.frequency(freq[33]);
-
-  // initialize peak values   
+   
   peak1raw = 1; peak2raw = 1; peak3raw = 1; peak4raw =  1; peak5raw =  1; peak6raw =  1;
   peak7raw = 1; peak8raw = 1; peak9raw = 1; peak10raw = 1; peak11raw = 1; peak12raw = 1;
   peak1val = 1; peak2val = 1; peak3val = 1; peak4val =  1; peak5val =  1; peak6val =  1;
@@ -655,11 +625,11 @@ void vocoderLoop() {
   if(peak11.available()) {peak11raw = peak11.read();}
   if(peak12.available()) {peak12raw = peak12.read();}
 
-  setEnvelope(peak1raw, peak1val, vocoderMixer1, 0);         // simulate envelope follower: it gets the envelope of the filtered signal through
-  setEnvelope(peak2raw, peak2val, vocoderMixer1, 1);         // the peak values and is used to determine the direction (increase or decrease) of
-  setEnvelope(peak3raw, peak3val, vocoderMixer1, 2);         // the mixer gain
-  setEnvelope(peak4raw, peak4val, vocoderMixer1, 3);         // peak values used to set mixer gain are divided to increase or multiplied to decrease
-  setEnvelope(peak5raw, peak5val, vocoderMixer2, 0);         // the values must not change fast to avoid distortion
+  setEnvelope(peak1raw, peak1val, vocoderMixer1, 0);        
+  setEnvelope(peak2raw, peak2val, vocoderMixer1, 1);         
+  setEnvelope(peak3raw, peak3val, vocoderMixer1, 2);         
+  setEnvelope(peak4raw, peak4val, vocoderMixer1, 3);       
+  setEnvelope(peak5raw, peak5val, vocoderMixer2, 0);         
   setEnvelope(peak6raw, peak6val, vocoderMixer2, 1);
   setEnvelope(peak7raw, peak7val, vocoderMixer2, 2);
   setEnvelope(peak8raw, peak8val, vocoderMixer2, 3);
@@ -672,21 +642,12 @@ void vocoderLoop() {
 
 // autotune code in main loop
 void autotuneLoop() {
-      // read current fundamental frequency into AutoTune
     if(notefreq.available()) {
       float note = notefreq.read();
       float prob = notefreq.probability();
       if(prob > 0.99) {
         if(note > 80 && note < 880) {
-          //Serial.printf("Note: %3.2f | Probably %.2f\n", note + 10, prob);
           autotuner.currFrequency = note + 10;
-          // Serial.print("target: ");
-          // Serial.println(autotuner.computeNearestSemitone(autotuner.currFrequency));
-          // Serial.print("manual: ");
-          // Serial.println(autotuner.manualPitchOffset);
-          // Serial.print("shift ratio: ");
-          // float pitchShift = autotuner.computeNearestSemitone(autotuner.currFrequency) / autotuner.currFrequency + autotuner.manualPitchOffset;
-          // pitchShift = (pitchShift < 0.51) ? 0.51 : ((pitchShift > 1.99) ? 1.99 : pitchShift);
         }
       }
     }
@@ -709,10 +670,10 @@ void setWaveformsSine(){
   for (int i = 0; i < numVoices; i++) {
     waveform[i].begin(WAVEFORM_SINE);
     waveform[i].amplitude(0);
-    envelope[i].attack(10); // Attack time in milliseconds
-    envelope[i].decay(100); // Decay time
-    envelope[i].sustain(0.5); // Sustain level
-    envelope[i].release(500); // Release time
+    envelope[i].attack(10); 
+    envelope[i].decay(100); 
+    envelope[i].sustain(0.5); 
+    envelope[i].release(500); 
   } 
 }
 
@@ -778,7 +739,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
   int oldestVoice = 0;
 
   for (int i = 0; i < numVoices; i++) {
-    if (voiceNote[i] == note) { // TODO: test if this prevents playing a duplicate note, which I think is the cause
+    if (voiceNote[i] == note) { 
       freeVoice = i;
       break;
     }
@@ -791,7 +752,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
     }
   }
 
-  if(freeVoice > -1) { // found a free voice
+  if(freeVoice > -1) { 
     float frequency = noteToFrequency(note);
     waveform[freeVoice].frequency(frequency);
     waveform[freeVoice].amplitude(velocity / 127.0);
@@ -799,7 +760,7 @@ void noteOn(uint8_t note, uint8_t velocity) {
     voiceUsed[freeVoice] = true;
     voiceNote[freeVoice] = note; 
     voiceStartTime[freeVoice] = millis();
-  } else { // replace with an existing voice
+  } else { 
     float frequency = noteToFrequency(note);
     waveform[oldestVoice].frequency(frequency);
     waveform[oldestVoice].amplitude(velocity / 127.0);
@@ -817,7 +778,7 @@ void noteOff(uint8_t note) {
       waveform[i].amplitude(0);
       envelope[i].noteOff();
       voiceUsed[i] = false;
-      voice Note[i] = -1; 
+      voiceNote[i] = -1; 
     }
   }
 }
@@ -828,5 +789,4 @@ float noteToFrequency(uint8_t note) {
 
 float convertKnob(float knob_value, float lower_bound, float upper_bound) {
   return lower_bound + ((knob_value - 0) / static_cast<float>(127 - 0)) * (upper_bound - lower_bound);
-  // autotuner.manualPitchOffset = AUTOTUNE_MIN_PS + ((controlVal - 0) / static_cast<float>(127 - 0)) * (AUTOTUNE_MAX_PS - AUTOTUNE_MIN_PS);
 }
