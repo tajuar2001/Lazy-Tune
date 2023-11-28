@@ -9,8 +9,8 @@
 MIDI_CREATE_DEFAULT_INSTANCE();
 #define AUDIO_GUITARTUNER_BLOCKS  12 // redefinition of notefreq parameter to reduce latency
 
-AudioInputI2S            inputAudio;           //xy=140,143
-// -------------------------------------------------------
+AudioInputI2S            inputAudio;  
+
 // Vocoder
 AudioAmplifier           modulatorGain;
 AudioMixer4              synthMixer;
@@ -19,6 +19,7 @@ AudioMixer4              vocoderMixer1;
 AudioMixer4              vocoderMixer2;
 AudioMixer4              vocoderMixer3;
 AudioMixer4              vocoderOut;
+
 // vocoder filters 1-24
 AudioFilterStateVariable filter1;
 AudioFilterStateVariable filter2;
@@ -44,6 +45,7 @@ AudioFilterStateVariable filter21;
 AudioFilterStateVariable filter22;
 AudioFilterStateVariable filter23;
 AudioFilterStateVariable filter24;
+
 // vocoder peak 1-12
 AudioAnalyzePeak         peak1;
 AudioAnalyzePeak         peak2; 
@@ -57,6 +59,7 @@ AudioAnalyzePeak         peak9;
 AudioAnalyzePeak         peak10; 
 AudioAnalyzePeak         peak11; 
 AudioAnalyzePeak         peak12; 
+
 // vocoder filters 25-48
 AudioFilterStateVariable filter25;
 AudioFilterStateVariable filter26;
@@ -83,29 +86,29 @@ AudioFilterStateVariable filter46;
 AudioFilterStateVariable filter47;
 AudioFilterStateVariable filter48;
 
-// -------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 // autotune
 AudioAnalyzeNoteFrequency notefreq;        // frequency detector
 AudioFilterBiquad        autotuneFilter;          // filter (biquad, easy lowpass filter)    
 CustomAutoTune autotuner;
-// -------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 AudioMixer4              sourceMixer;         //xy=760,144
 
-AudioEffectReverb        reverb1;        //xy=1049,122
-AudioEffectFlange        flange1;        //xy=1046,169
-AudioEffectFreeverb      freeverb1;      //xy=1045,215
-AudioEffectChorus        chorus1;        //xy=1047,263
-AudioMixer4              delayBus;         //xy=1067,562
+AudioEffectReverb        reverb1;        
+AudioEffectFlange        flange1;        
+AudioEffectFreeverb      freeverb1;      
+AudioEffectChorus        chorus1;        
+AudioMixer4              delayBus;        
 
-AudioEffectBitcrusher    bitcrusher1;    //xy=1044,309
-AudioEffectWaveshaper    distortion;     //xy=1043,357
-AudioEffectWaveshaper    limiter;     //xy=1044,404
-AudioEffectMultiply      multiply1;      //xy=1036,456
-AudioMixer4              distortionBus;         //xy=1065,641
+AudioEffectBitcrusher    bitcrusher1;   
+AudioEffectWaveshaper    distortion;     
+AudioEffectWaveshaper    limiter;     
+AudioEffectMultiply      multiply1;    
+AudioMixer4              distortionBus;      
 
-AudioMixer4              masterMixer;         //xy=904,766
-AudioAmplifier           outputVolumeControl;           //xy=928,829
-AudioOutputI2S           finalOutputAudio;           //xy=1158,836
+AudioMixer4              masterMixer;        
+AudioAmplifier           outputVolumeControl;          
+AudioOutputI2S           finalOutputAudio;       
 
 AudioControlSGTL5000 sgtl5000_1;
 
@@ -121,6 +124,7 @@ AudioConnection patchCords[108] = {
   AudioConnection(inputAudio, 1, carrierMixer, 0),
   AudioConnection(synthMixer, 0, carrierMixer, 1),
   AudioConnection(inputAudio, 0, modulatorGain, 0),
+
   // modulatorGain to filters
   AudioConnection(modulatorGain, 0, filter1, 0),
   AudioConnection(modulatorGain, 0, filter3, 0),
@@ -134,6 +138,7 @@ AudioConnection patchCords[108] = {
   AudioConnection(modulatorGain, 0, filter19, 0),
   AudioConnection(modulatorGain, 0, filter21, 0),
   AudioConnection(modulatorGain, 0, filter23, 0),
+
   // filter to filter (analyzer)
   AudioConnection(filter1, 0, filter2, 0),
   AudioConnection(filter3, 0, filter4, 0),
@@ -147,6 +152,7 @@ AudioConnection patchCords[108] = {
   AudioConnection(filter19, 0, filter20, 0),
   AudioConnection(filter21, 0, filter22, 0),
   AudioConnection(filter23, 0, filter24, 0),
+
   // filter to peak
   AudioConnection(filter2, 0, peak1, 0),
   AudioConnection(filter4, 0, peak2, 0),
@@ -160,9 +166,11 @@ AudioConnection patchCords[108] = {
   AudioConnection(filter20, 0, peak10, 0),
   AudioConnection(filter22, 0, peak11, 0),
   AudioConnection(filter24, 0, peak12, 0),
-  //
+
+  // peak to mixer
   AudioConnection(carrierMixer, 0, sourceMixer, 3),
   AudioConnection(carrierMixer, 0, multiply1, 1),
+
   // carrierMixer to filters
   AudioConnection(carrierMixer, 0, filter25, 0),
   AudioConnection(carrierMixer, 0, filter27, 0),
@@ -176,6 +184,7 @@ AudioConnection patchCords[108] = {
   AudioConnection(carrierMixer, 0, filter43, 0),
   AudioConnection(carrierMixer, 0, filter45, 0),
   AudioConnection(carrierMixer, 0, filter47, 0),
+
   // filters to filters (envelope)
   AudioConnection(filter25, 0, filter26, 0),
   AudioConnection(filter27, 0, filter28, 0),
@@ -189,6 +198,7 @@ AudioConnection patchCords[108] = {
   AudioConnection(filter43, 0, filter44, 0),
   AudioConnection(filter45, 0, filter46, 0),
   AudioConnection(filter47, 0, filter48, 0),
+
   // filters to mixers
   AudioConnection(filter26, 0, vocoderMixer1, 0),
   AudioConnection(filter28, 0, vocoderMixer1, 1),
@@ -202,7 +212,8 @@ AudioConnection patchCords[108] = {
   AudioConnection(filter44, 0, vocoderMixer3, 1),
   AudioConnection(filter46, 0, vocoderMixer3, 2),
   AudioConnection(filter48, 0, vocoderMixer3, 3),
-  //
+
+  // mixers to vocoderOut
   AudioConnection(vocoderMixer1, 0, vocoderOut, 0),
   AudioConnection(vocoderMixer2, 0, vocoderOut, 1),
   AudioConnection(vocoderMixer3, 0, vocoderOut, 2),
@@ -338,6 +349,7 @@ float peak1raw, peak2raw, peak3raw, peak4raw, peak5raw, peak6raw,
 float peak1val, peak2val, peak3val, peak4val, peak5val, peak6val,
   peak7val, peak8val, peak9val, peak10val, peak11val, peak12val;
 
+
 // performance test
 elapsedMillis serialtimer;
 
@@ -366,13 +378,11 @@ void setup() {
   modulatorGain.gain(1);
   Vocoderinit();
 
-  // initialize autotune
-    // filter setup
-    autotuneFilter.setLowpass(0, 3400, 0.707); // Butterworth filter, 12 db/octave
-    notefreq.begin(.15); // Initialize Yin Algorithm Absolute Threshold (15% is a good number)
-    // autotune setup
-    autotuner.currFrequency = 20;
-    autotuner.manualPitchOffset = 0;
+  //autotune
+  autotuneFilter.setLowpass(0, 3400, 0.707); // Butterworth filter, 12 db/octave
+  notefreq.begin(.15); // Initialize Yin Algorithm Absolute Threshold (15% is a good number)
+  autotuner.currFrequency = 20;
+  autotuner.manualPitchOffset = 0;
 
   // initialize effects
   flange1.begin(flangeBuffer, FLANGE_BUFFER_SIZE, 100, 100, 100);
