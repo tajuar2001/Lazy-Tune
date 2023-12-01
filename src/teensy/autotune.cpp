@@ -1,40 +1,32 @@
 #include "autotune.h"
 
-// ---------------------------------
-
-// main update function
 void CustomAutoTune::update(void) {
-  audio_block_t *block;
+    audio_block_t *block;
 
-  // receive data
-  block = receiveWritable(0);
-  if(block) {
-     //Serial.printf("Note: %3.2f\n", currFrequency);
-    // call stuff
-    float floatInput[AUDIO_BLOCK_SAMPLES];
+    // receive data
+    block = receiveWritable(0);
+    if (block) {
+        float floatInput[AUDIO_BLOCK_SAMPLES];
 
-    // convert input to floats with proper scaling
-    for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
-        floatInput[i] = (float)((float)block->data[i])/(INT_MAX);
+        // Convert input to floats with scaling
+        for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
+            floatInput[i] = (float)((float)block->data[i]) / (INT_MAX);
+        }
+        
+        pitchShift(computeNearestSemitone(currFrequency), &floatInput[0], &floatInput[0]);
+
+        // Convert processed signal back to int16
+        for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
+            block->data[i] = (int16_t)(floatInput[i] * INT_MAX);
+        }
+        transmit(block);
+        release(block);
     }
-    
-    pitchShift(computeNearestSemitone(currFrequency), &floatInput[0], &floatInput[0]);
-
-  // Convert the processed float32 signal back to the original array
-  // and scale back to int16
-  for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
-      block->data[i] = (int16_t)(floatInput[i] * INT_MAX); // Convert back to 16-bit int
-  }
-    transmit(block);
-    release(block);
-  } // if(block)
-
-  return;
 }
 
-/*
- * Public Functions
- */
+
+// Public Functions
+
  float CustomAutoTune::computeNearestSemitone(float noteFrequency) {
     // Calculate the nearest semitone frequency
     int nearestSemitone = round(12.0 * log2((noteFrequency + 1e-9) / 440));
@@ -211,58 +203,60 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
   }
 }
 
-// -------------------------------
 
 void smbFft(float *fftBuffer, long fftSize, long sign) {
-  float wr, wi, arg, *p1, *p2, temp;
-  float tr, ti, ur, ui, *p1r, *p1i, *p2r, *p2i;
-  long i, bitm, j, le, le2, k;
+    float cosineComponent, sineComponent, angle, *pointer1, *pointer2, temp;
+    float realTemp, imagTemp, ur, ui, *realPart1, *imagPart1, *realPart2, *imagPart2;
+    long i, bitMask, index, subFFTLength, halfSubFFTLength, iteration;
 
-  for (i = 2; i < 2*fftSize-2; i += 2) {
-    for (bitm = 2, j = 0; bitm < 2*fftSize; bitm <<= 1) {
-      if (i & bitm) j++;
-      j <<= 1;
+    // Rearrange the array elements by bit-reversing the indices
+    for (i = 2; i < 2 * fftSize - 2; i += 2) {
+        for (bitMask = 2, index = 0; bitMask < 2 * fftSize; bitMask <<= 1) {
+            if (i & bitMask) index++;
+            index <<= 1;
+        }
+        if (i < index) {
+            pointer1 = fftBuffer + i; pointer2 = fftBuffer + index;
+            temp = *pointer1; *pointer1++ = *pointer2;
+            *pointer2++ = temp; temp = *pointer1;
+            *pointer1 = *pointer2; *pointer2 = temp;
+        }
     }
-    if (i < j) {
-      p1 = fftBuffer+i; p2 = fftBuffer+j;
-      temp = *p1; *(p1++) = *p2;
-      *(p2++) = temp; temp = *p1;
-      *p1 = *p2; *p2 = temp;
+
+    // FFT computation using the Cooley-Tukey algorithm
+    for (iteration = 0, subFFTLength = 2; iteration < (long)(log(fftSize) / log(2.0) + 0.5); iteration++) {
+        subFFTLength <<= 1;
+        halfSubFFTLength = subFFTLength >> 1;
+        ur = 1.0;
+        ui = 0.0;
+        angle = M_PI / (halfSubFFTLength >> 1);
+        cosineComponent = cos(angle);
+        sineComponent = sign * sin(angle);
+        for (index = 0; index < halfSubFFTLength; index += 2) {
+            realPart1 = fftBuffer + index; imagPart1 = realPart1 + 1;
+            realPart2 = realPart1 + halfSubFFTLength; imagPart2 = realPart2 + 1;
+            for (i = index; i < 2 * fftSize; i += subFFTLength) {
+                realTemp = *realPart2 * ur - *imagPart2 * ui;
+                imagTemp = *realPart2 * ui + *imagPart2 * ur;
+                *realPart2 = *realPart1 - realTemp; *imagPart2 = *imagPart1 - imagTemp;
+                *realPart1 += realTemp; *imagPart1 += imagTemp;
+                realPart1 += subFFTLength; imagPart1 += subFFTLength;
+                realPart2 += subFFTLength; imagPart2 += subFFTLength;
+            }
+            realTemp = ur * cosineComponent - ui * sineComponent;
+            ui = ur * sineComponent + ui * cosineComponent;
+            ur = realTemp;
+        }
     }
-  }
-  for (k = 0, le = 2; k < (long)(log(fftSize)/log(2.)+.5); k++) {
-    le <<= 1;
-    le2 = le>>1;
-    ur = 1.0;
-    ui = 0.0;
-    arg = M_PI / (le2>>1);
-    wr = cos(arg);
-    wi = sign*sin(arg);
-    for (j = 0; j < le2; j += 2) {
-      p1r = fftBuffer+j; p1i = p1r+1;
-      p2r = p1r+le2; p2i = p2r+1;
-      for (i = j; i < 2*AUTOTUNE_FFT_SIZE; i += le) {
-        tr = *p2r * ur - *p2i * ui;
-        ti = *p2r * ui + *p2i * ur;
-        *p2r = *p1r - tr; *p2i = *p1i - ti;
-        *p1r += tr; *p1i += ti;
-        p1r += le; p1i += le;
-        p2r += le; p2i += le;
-      }
-      tr = ur*wr - ui*wi;
-      ui = ur*wi + ui*wr;
-      ur = tr;
-    }
-  }
 }
+
+
 double smbAtan2(double x, double y) {
-  double signx;
-  if (x > 0.) signx = 1.;  
-  else signx = -1.;
-  
-  if (x == 0.) return 0.;
-  if (y == 0.) return signx * M_PI / 2.;
-  
-  return atan2(x, y);
+    // Handle edge cases directly
+    if (x == 0.0) return 0.0;
+    if (y == 0.0) return x > 0.0 ? M_PI / 2.0 : -M_PI / 2.0;
+
+    // For normal cases, use the standard atan2 function
+    return atan2(x, y);
 }
-// -------------------------------
+

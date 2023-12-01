@@ -24,7 +24,6 @@ double smbAtan2(double x, double y);
 #define AUTOTUNE_FFT_SIZE 512
 #define AUTOTUNE_SAMPLING_RATE AUDIO_SAMPLE_RATE
 
-// enum autotuneMethod { none, original };
 
 class CustomAutoTune : public AudioStream {
 public:
@@ -38,11 +37,7 @@ public:
     /* Public Parameters */
     float currFrequency;
     float manualPitchOffset; // -0.4 to 0.9
-
-    /* Controls */
-    // option editor (true if successful, false otherwise)
-    // boolean option_edit(autotuneMethod method); // select method
-
+    
     /* AutoTune */
     float computeNearestSemitone(float noteFrequency);
     void pitchShift(float targetPitch, float* indata, float* outdata);
