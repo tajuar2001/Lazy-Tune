@@ -51,23 +51,20 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
     // Calculate the pitch shift factor based on the target and current frequency
     float pitchShift = targetPitch / currFrequency + manualPitchOffset;
     pitchShift = (pitchShift < 0.51) ? 0.51 : ((pitchShift > 1.99) ? 1.99 : pitchShift);
-    long osamp = 4; 
-    float sampleRate = 44100;
+    long overlap_samples = 4; 
 
   static long gRover = false, gInit = false;
   double magn, phase, tmp, window, real, imag;
   double freqPerBin, expct;
   long i,k, qpd, index, inFifoLatency, stepSize, fftFrameSize2;
 
-  /* set up some handy variables */
   fftFrameSize2 = AUTOTUNE_FFT_SIZE/2;
-  stepSize = AUTOTUNE_FFT_SIZE/osamp;
-  freqPerBin = sampleRate/(double)AUTOTUNE_FFT_SIZE;
+  stepSize = AUTOTUNE_FFT_SIZE/overlap_samples;
+  freqPerBin = AUTOTUNE_SAMPLING_RATE/(double)AUTOTUNE_FFT_SIZE;
   expct = 2.*M_PI*(double)stepSize/(double)AUTOTUNE_FFT_SIZE;
   inFifoLatency = AUTOTUNE_FFT_SIZE-stepSize;
-  if (gRover == false) gRover = inFifoLatency;
 
-  /* initialize our static arrays */
+  if (gRover == false) gRover = inFifoLatency;
   if (gInit == false) {
     memset(gInFIFO, 0, MAX_FRAME_LENGTH*sizeof(float));
     memset(gOutFIFO, 0, MAX_FRAME_LENGTH*sizeof(float));
@@ -80,31 +77,25 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
     gInit = true;
   }
 
-  /* main processing loop */
+  /* main loop */
   for (i = 0; i < AUDIO_BLOCK_SAMPLES; i++){
 
-    /* As long as we have not yet collected enough data just read in */
     gInFIFO[gRover] = indata[i];
     outdata[i] = gOutFIFO[gRover-inFifoLatency];
     gRover++;
 
-    /* now we have enough data for processing */
     if (gRover >= AUTOTUNE_FFT_SIZE) {
       gRover = inFifoLatency;
 
-      /* do windowing and re,im interleave */
       for (k = 0; k < AUTOTUNE_FFT_SIZE;k++) {
         window = -.5*cos(2.*M_PI*(double)k/(double)AUTOTUNE_FFT_SIZE)+.5;
         gFFTworksp[2*k] = gInFIFO[k] * window;
         gFFTworksp[2*k+1] = 0.;
       }
 
+      /* analysis */
+      autoFFT(gFFTworksp, AUTOTUNE_FFT_SIZE, -1);
 
-      /* ***************** ANALYSIS ******************* */
-      /* do transform */
-      smbFft(gFFTworksp, AUTOTUNE_FFT_SIZE, -1);
-
-      /* this is the analysis step */
       for (k = 0; k <= fftFrameSize2; k++) {
 
         /* de-interlace FFT buffer */
@@ -113,7 +104,7 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
 
         /* compute magnitude and phase */
         magn = 2.*sqrt(real*real + imag*imag);
-        phase = smbAtan2(imag,real);
+        phase = autoAtan2(imag,real);
 
         /* compute phase difference */
         tmp = phase - gLastPhase[k];
@@ -129,7 +120,7 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
         tmp -= M_PI*(double)qpd;
 
         /* get deviation from bin frequency from the +/- Pi interval */
-        tmp = osamp*tmp/(2.*M_PI);
+        tmp = overlap_samples*tmp/(2.*M_PI);
 
         /* compute the k-th partials' true frequency */
         tmp = (double)k*freqPerBin + tmp*freqPerBin;
@@ -140,8 +131,7 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
 
       }
 
-      /* ***************** PROCESSING ******************* */
-      /* this does the actual pitch shifting */
+      /* pitch shifting */
       memset(gSynMagn, 0, AUTOTUNE_FFT_SIZE*sizeof(float));
       memset(gSynFreq, 0, AUTOTUNE_FFT_SIZE*sizeof(float));
       for (k = 0; k <= fftFrameSize2; k++) { 
@@ -152,8 +142,7 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
         } 
       }
       
-      /* ***************** SYNTHESIS ******************* */
-      /* this is the synthesis step */
+      /* synthesis */
       for (k = 0; k <= fftFrameSize2; k++) {
 
         /* get magnitude and true frequency from synthesis arrays */
@@ -166,8 +155,8 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
         /* get bin deviation from freq deviation */
         tmp /= freqPerBin;
 
-        /* take osamp into account */
-        tmp = 2.*M_PI*tmp/osamp;
+        /* take overlap_samples into account */
+        tmp = 2.*M_PI*tmp/overlap_samples;
 
         /* add the overlap phase advance back in */
         tmp += (double)k*expct;
@@ -185,12 +174,12 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
       for (k = AUTOTUNE_FFT_SIZE+2; k < 2*AUTOTUNE_FFT_SIZE; k++) gFFTworksp[k] = 0.;
 
       /* do inverse transform */
-      smbFft(gFFTworksp, AUTOTUNE_FFT_SIZE, 1);
+      autoFFT(gFFTworksp, AUTOTUNE_FFT_SIZE, 1);
 
       /* do windowing and add to output accumulator */ 
       for(k=0; k < AUTOTUNE_FFT_SIZE; k++) {
         window = -.5*cos(2.*M_PI*(double)k/(double)AUTOTUNE_FFT_SIZE)+.5;
-        gOutputAccum[k] += 2.*window*gFFTworksp[2*k]/(fftFrameSize2*osamp);
+        gOutputAccum[k] += 2.*window*gFFTworksp[2*k]/(fftFrameSize2*overlap_samples);
       }
       for (k = 0; k < stepSize; k++) gOutFIFO[k] = gOutputAccum[k];
 
@@ -199,12 +188,13 @@ void CustomAutoTune::pitchShift(float targetPitch, float* indata, float* outdata
 
       /* move input FIFO */
       for (k = 0; k < inFifoLatency; k++) gInFIFO[k] = gInFIFO[k+stepSize];
-    }
-  }
+    } // if
+
+  } // for (main loop)
+
 }
 
-
-void smbFft(float *fftBuffer, long fftSize, long sign) {
+void CustomAutoTune::autoFFT(float *fftBuffer, long fftSize, long sign) {
     float cosineComponent, sineComponent, angle, *pointer1, *pointer2, temp;
     float realTemp, imagTemp, ur, ui, *realPart1, *imagPart1, *realPart2, *imagPart2;
     long i, bitMask, index, subFFTLength, halfSubFFTLength, iteration;
@@ -251,7 +241,7 @@ void smbFft(float *fftBuffer, long fftSize, long sign) {
 }
 
 
-double smbAtan2(double x, double y) {
+double CustomAutoTune::autoAtan2(double x, double y) {
     // Handle edge cases directly
     if (x == 0.0) return 0.0;
     if (y == 0.0) return x > 0.0 ? M_PI / 2.0 : -M_PI / 2.0;

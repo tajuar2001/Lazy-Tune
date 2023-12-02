@@ -4,19 +4,9 @@
 #include <Arduino.h>
 #include <AudioStream.h>
 #include <Audio.h>
-// -------------------------------
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
-
-// -------------------------------
-#define M_PI 3.14159265358979323846
-#define MAX_FRAME_LENGTH 8192
-
-void smbFft(float *fftBuffer, long fftFrameSize, long sign);
-double smbAtan2(double x, double y);
-// -------------------------------
-
 
 #include "arm_math.h"
 #include "arm_common_tables.h"
@@ -24,6 +14,8 @@ double smbAtan2(double x, double y);
 #define AUTOTUNE_FFT_SIZE 512
 #define AUTOTUNE_SAMPLING_RATE AUDIO_SAMPLE_RATE
 
+#define M_PI 3.14159265358979323846
+#define MAX_FRAME_LENGTH 8192
 
 class CustomAutoTune : public AudioStream {
 public:
@@ -41,10 +33,10 @@ public:
     /* AutoTune */
     float computeNearestSemitone(float noteFrequency);
     void pitchShift(float targetPitch, float* indata, float* outdata);
-    // autotune implementations
-    void autotuneOriginal(float* micSignal);
 
 private:
+    void autoFFT(float *fftBuffer, long fftFrameSize, long sign);
+    double autoAtan2(double x, double y);
     audio_block_t *inputQueueArray[1];
     // autotuneMethod currMethod;
 };
